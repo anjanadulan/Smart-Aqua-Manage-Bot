@@ -1,152 +1,142 @@
-# Smart Aqua Manage Bot
+# Smart Aqua Manage Bot (v2.0)
 
-An advanced, decentralized, and standalone aquarium management ecosystem powered by local microcontrollers, physical sensors, and a real-time responsive 3D web interface. 
+A highly reliable, decentralized, and standalone aquarium management ecosystem powered by local microcontrollers, physical sensors, and a real-time responsive 3D web interface. 
 
-By prioritizing high-reliability local hardware loops over complex cloud networks, this system ensures zero-latency task execution, maximum safety fail-safes, and a fully automated maintenance schedule—including an innovative motorized glass-cleaning system.
+By prioritizing high-reliability local hardware loops over complex cloud networks, this bot ensures zero-latency task execution, maximum safety fail-safes, and a fully automated maintenance schedule—completely free of external dependencies or cloud connectivity.
 
 ---
 
-## 🛠️ System Component Architecture
+## System Architecture Diagram
 
-The Smart Aqua Manage Bot operates completely offline on a standalone localized loop. The architecture is split between a local 3D web interface dashboard and a dedicated microcontroller managing the sensor-actuator loops.
+The Smart Aqua Manage Bot operates completely offline on a standalone localized loop. The main controllers (NodeMCU and ESP32-CAM) establish a local Wi-Fi access point (AP) or connect to a local router, serving WebSockets and HTTP protocols to host the web dashboard and stream real-time telemetry.
 
-```mermaid
-graph TD
-    %% Define Styles
-    classDef web fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#fff;
-    classDef mcu fill:#1e293b,stroke:#a855f7,stroke-width:2px,color:#fff;
-    classDef hardware fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#fff;
-    classDef sensor fill:#1e293b,stroke:#f59e0b,stroke-width:2px,color:#fff;
-
-    %% Nodes
-    Web["Interactive 3D Web App<br>(Three.js / CSS Grid / Vanilla JS)"]:::web
-    MCU["NodeMCU Controller<br>(ESP8266 / ESP32)"]:::mcu
-    
-    Feeder["Feeder Unit<br>- Servo Actuator<br>- IR/LDR Surface Scan"]:::hardware
-    Relays["Water & UV Relays<br>- AC Filter Pump<br>- UV Sterilizer"]:::hardware
-    Cleaner["Glass Cleaning System<br>- Stepper Motor / H-Bridge<br>- Tracker Timer"]:::hardware
-    
-    WaterLevel["Water Level Sensor<br>(Float/Non-contact Sensors)"]:::sensor
-
-    %% Connections
-    Web <-->|Local Wi-Fi / WebSockets| MCU
-    MCU --> Feeder
-    MCU --> Relays
-    MCU --> Cleaner
-    Feeder --> WaterLevel
-    Cleaner --> WaterLevel
-    WaterLevel -->|Analog/Digital Read| MCU
 ```
-
-### Logical Overview
-```
-                       +-----------------------------+
-                       |   Interactive 3D Web App    |
-                       |    (Three.js / Vanilla CSS) |
-                       +--------------+--------------+
-                                      |
-                                      | Local Wi-Fi / WebSockets
-                                      v
-                       +-----------------------------+
-                       |      NodeMCU Controller     |
-                       |       (ESP8266/ESP32)       |
-                       +--------------+--------------+
-                                      |
-         +----------------------------+----------------------------+
-         |                            |                            |
-         v                            v                            v
-+------------------+         +------------------+         +------------------+
-|   Feeder Unit    |         | Water & UV Relays|         | Glass Cleaning   |
-| - Servo Actuator |         | - AC Filter Pump |         | - Stepper Motor  |
-| - IR Surface Scan|         | - UV Sterilizer  |         | - Tracker Timer  |
-+------------------+         +------------------+         +------------------+
-         |                                                         |
-         +-------------------> [Water Level Sensor] <--------------+
+                  +-------------------------------------------------+
+                  |             Responsive Web Dashboard            |
+                  |     (HTML5, Vanilla CSS, Three.js, Vanilla JS)  |
+                  +--------+-------------------------------+--------+
+                           ^                               ^
+                           | HTTP / MJPEG Stream           | WebSockets / HTTP
+                           | (Port 80/81)                  | (Port 80/82)
+                           v                               v
+                +----------+----------+         +----------+----------+
+                |  ESP32-CAM Module   |         |  NodeMCU Controller |
+                | (Secondary Stream)  |         |   (Core Controller) |
+                +---------------------+         +----------+----------+
+                                                           |
+      +------------------------+---------------------------+------------------------+------------------------+
+      |                        |                           |                        |                        |
+      v                        v                           v                        v                        v
++-----+------+           +-----+------+              +-----+------+           +-----+------+           +-----+------+
+| Feeder Unit|           |Water/UV Lts|              |Glass Clean |           | Water Level|           | pH Sensor  |
+| -SG90 Servo|           | -5V Relay  |              | -Stepper   |           | -Capacitive|           | -pH-4502C  |
+| -IR Sensor |           |  (2-Ch)    |              |  -Driver   |           |  Sensor    |           |  Analog pH |
++------------+           +------------+              +------------+           +------------+           +------------+
 ```
 
 ---
 
-## 📋 System Functions Matrix
+## Functional Specification Matrix
 
 ### 🥖 1. Feeding & Automation Functions
-* **6-Hour Scheduled Feeding Loop:** A local internal timer automatically triggers a physical feeding routine every 6 hours.
-* **Local Surface Barrier Scan:** Prior to dropping food, the system scans the surface zone utilizing an Infrared (IR) beam or Light-Dependent Resistor (LDR) barrier mounted inside a floating feeding ring.
-* **Intelligent Skip Override:** If the surface scan detects leftover floating food, the upcoming scheduled feeding cycle is immediately aborted to prevent hazardous overfeeding and organic water decay.
+* **6-Hour Scheduled Feeding Loop:** A local script running on the NodeMCU automatically triggers a physical feeding cycle every 6 hours by driving the SG90 Micro-Servo Motor to release a portion of food.
+* **Local Surface Barrier Scan:** Before dropping food, the system scans the surface zone utilizing an Infrared (IR) Obstacle Avoidance Sensor module mounted inside a floating feeding ring.
+* **Intelligent Skip Override:** If the IR sensor detects unconsumed floating food remaining on the surface, the NodeMCU aborts the automated cycle immediately to prevent hazardous overfeeding and organic water decay.
 * **Monospace Countdown Telemetry:** Calculates and displays a precise numerical countdown ($hh:mm:ss$) on the web dashboard showing the remaining time until the next automatic feed.
-* **Physical Feed Override Button:** A dedicated dashboard switch that triggers the feeding servo immediately, completely bypassing the surface sensor check.
+* **Physical Feed Override Button:** A dedicated dashboard switch that triggers the feeding servo immediately, completely bypassing the IR surface sensor check.
 
 ### 🎛️ 2. Water Filtration & UV Control Functions
-* **Filter Pump Toggle Switch:** An instantaneous mechanical switch in the Web UI to engage or cut power to the primary AC water filtration pump relay.
-* **UV Sterilizer Toggle Switch:** An independent control switch on the dashboard to activate or deactivate the germicidal Ultraviolet light bulb to control algae spores and clear turbidity.
+* **Filter Pump Toggle Switch:** Web dashboard commands route to the NodeMCU to engage or cut power to the primary AC water filtration pump by toggling a channel on the 5V Relay Board.
+* **UV Sterilizer Toggle Switch:** Independent dashboard command to toggle a second channel on the 5V Relay Board to activate/deactivate the germicidal UV clarifier lamp to control algae spores and clear turbidity.
 
 ### 🚨 3. Safety & Monitoring Functions
-* **Critical Water Level Monitoring:** Active, continuous tracking of the aquarium's volume via physical float switches or non-contact liquid level sensors.
-* **Direct Emergency Routing:** If the water level drops below the designated threshold, critical alarm indicators immediately override the web interface, routing real-time warnings directly to localized alert logs.
+* **Critical Water Level Monitoring:** Active, continuous tracking of the aquarium's volume via a Capacitive Water Sensor mounted externally or internally on the glass panel.
+* **Direct Emergency Routing:** If the water level drops below the designated safe threshold, the NodeMCU immediately overrides the web dashboard timeline, routing real-time warnings directly to the top of the interface.
 
 ### 🧼 4. Automated Glass Cleaning Functions
-* **Accumulated Run-Time Tracker:** Logs the cumulative running hours of the UV light and ambient lighting systems, which directly correlate to predicted algae accumulation rates.
-* **Glass Condition Estimation Logic:** Every $168\text{ hours}$ (7 days) of total lighting runtime, the system flags the aquarium glass panel as degraded or "dirty."
-* **Automated Cleaning Cycle Activation:** The NodeMCU automatically triggers a high-torque continuous servo or stepper motor drive system, moving a magnetic glass-scraper carriage horizontally back and forth across the front pane.
-* **Web UI Glass Maintenance Alert:** Pushes an amber status card reading *"Automated Glass Cleaning in Progress"* to the web timeline and applies a green, cloudy texture layer over the 3D tank interface model during active sweeps.
-* **Manual Reset & Run Switch:** Provides a dashboard control button to force an instant glass cleaning cycle on demand and reset the accumulated run-time tracker back to zero.
+* **Accumulated Run-Time Tracker & Logic:** Logs the cumulative running hours of the UV light and ambient lighting systems, which directly correlate to predicted algae accumulation rates. Every $168\text{ hours}$ (7 days) of total lighting runtime, the system flags the glass panel as degraded or "dirty."
+* **Automated Cleaning Cycle Activation:** The NodeMCU automatically triggers the High-Torque Stepper Motor driven by the Stepper Motor Driver Breakout Board, moving a magnetic glass-scraper carriage horizontally back and forth across the front pane.
+* **Web UI Maintenance Alert:** Pushes an amber status card reading *"Automated Glass Cleaning in Progress"* to the web timeline and applies a green, cloudy texture layer over the 3D tank interface model during active sweeps.
+* **Manual Reset & Run Switch:** A dashboard control button to force an instant glass cleaning cycle on demand and reset the accumulated run-time tracker back to zero.
+
+### 🧪 5. Water Quality & Fish Monitoring Functions
+* **pH Level Monitoring Function:** Captures raw analog signals from the Analog pH Sensor (pH-4502C), runs calibration algorithms locally on the NodeMCU, and streams real-time water acidity updates to an interactive arc-gauge widget on the dashboard.
+* **Fish Movement & Video Monitoring Function:** The independent ESP32-CAM Module hosts a localized HTTP MJPEG video stream broadcasted straight to a Live Preview container frame on the web dashboard for remote physical inspection.
 
 ---
 
-## 🔌 Hardware Setup & Interfacing (Conceptual)
+## Master Bill of Materials
 
-To achieve maximum isolation and electrical protection for aquatic systems, the architecture utilizes a decentralized, opto-isolated wiring topology:
-
-| Component | Functionality & Connection | Purpose |
+| Category | Component Name | Description & Quantity |
 | :--- | :--- | :--- |
-| **Digital Relay Board** | Connects NodeMCU digital pins through optoisolators to high-voltage AC switches. | Isolates low-voltage electronics from high-voltage AC utility lines running the filtration pumps and UV ballasts. |
-| **Motor Driver Module** | Employs an H-bridge driver (e.g., A4988 or L298N) to control the high-torque stepper/servo drive belt. | Drives the magnetic scraper carriage smoothly and reliably along the front pane. |
-| **Fail-Safe Circuitry** | Sensors default to high-impedance closed states. | Ensures that if a cable is severed or disconnected, the system fails closed and triggers an immediate emergency warning. |
+| **🧠 Core Controllers & Power** | **NodeMCU Microcontroller (ESP32 or ESP8266)** | Main controller running the schedules, monitoring logic, and sensor-actuator loops. |
+| | **ESP32-CAM Module** | Secondary processing module equipped with an OV2640 camera to stream MJPEG video feed. |
+| **🔌 Switching & Motor Drivers** | **5V Relay Board** | Digital low-voltage relay board to isolate and switch high-voltage AC filter pump and UV sterilizer loads. |
+| | **Stepper Motor Driver Breakout Board** | Breakout driver (e.g., A4988) to deliver high-current step and direction control pulses. |
+| **🧲 Actuators & Mechanical** | **SG90 Micro-Servo Motor** | High-precision mini servo to rotate the food-dispensing mechanism during feed cycles. |
+| | **High-Torque Stepper Motor** | NEMA-style stepper motor to drive the belt-driven magnetic glass-scraper carriage. |
+| **📡 Sensors & Water Quality** | **Infrared (IR) Obstacle Avoidance Sensor module** | Transmits and detects IR reflections to scan the feeding ring surface for leftovers. |
+| | **Analog pH Sensor (pH-4502C)** | Water testing probe with signal conditioning board to measure water acidity (pH). |
+| | **Capacitive Water Sensor** | Contactless capacitive sensor attached to the glass to monitor the water volume threshold. |
 
 ---
 
-## 🎨 Web App Layout & UI Specs
+## Responsive Web Dashboard Layout Guide
 
-The frontend interface is a unified, fully responsive single-page dashboard divided into three balanced interactive panels:
+The user interface is structured as a unified, fully responsive single-page dashboard optimized for desktop, tablet, and mobile browsers:
 
 ```
-+-----------------------------------------------------------------------------+
-|                            SMART AQUA MANAGE BOT                            |
-+--------------------------+--------------------------+-----------------------+
-|  Panel 1: Control Center | Panel 2: Live View & Commands | Panel 3: Status Log  |
-|                          |                          |                       |
-|   [ 3D Viewport ]        |   Telemetry:             |  Timeline:            |
-|   * Water Level Y-Scale  |   - Next Feed: 05:42:10  |  [Cyan] Filter ON     |
-|   * UV violet ambient glow|                         |                       |
-|   * Particle bubbles     |   Switches:              |  [Amber] Feed Skipped |
-|   * Green cloudy texture |   [Filter]  [UV Light]   |                       |
-|                          |   [Feed]    [Clean Glass]|  [Red] LOW WATER!     |
-+--------------------------+--------------------------+-----------------------+
++---------------------------------------------------------------------------------+
+|                            SMART AQUA MANAGE BOT (v2.0)                         |
++--------------------------+------------------------------+-----------------------+
+|  Panel 1: Control Center | Panel 2: Live View & Commands| Panel 3: Status Log   |
+|                          |                              |                       |
+|   [ 3D Viewport ]        |  [ Live Video Stream ]       |  Timeline Registry:   |
+|                          |  - (ESP32-CAM MJPEG Feed)    |                       |
+|   * Dynamic Y-Scale      |                              |  [Cyan] Filter Active |
+|     Water Mesh           |  [ pH Level Arc-Gauge ]      |  [Cyan] UV Lamp ON    |
+|                          |  - Real-time pH: 7.2         |                       |
+|   * UV violet ambient    |                              |  [Amber] Cleaning...  |
+|     glow overlay         |  [ Telemetry & Countdown ]   |                       |
+|                          |                              |  [Amber] Feed Skipped |
+|   * Rising particle      |  [ Manual Action Buttons ]   |                       |
+|     bubble simulation    |  - Filter | UV Light         |  [Red] LOW WATER!     |
+|                          |  - Feed   | Clean Glass      |                       |
++--------------------------+------------------------------+-----------------------+
 ```
 
-### 🎛️ Panel 1: Control Center (3D Viewport)
-An interactive, low-poly 3D render of the aquarium tank powered by **Three.js** that reacts dynamically to physical telemetry updates:
-* **Water Level:** Scales its $Y$-axis mesh programmatically based on the water level sensor status.
-* **UV Active:** Fades in a glowing violet interior ambient light when the UV light is toggled.
-* **Active Filtration:** Emits a vertical stream of particle bubbles when the filter pump runs.
-* **Dirty Glass:** Gradually renders a green-tinted cloudy texture over the glass panel mesh as the run-time clock increases.
+### 🎛️ Panel 1: 3D Three.js Viewport Control Center
+An interactive 3D render of the aquarium tank using **Three.js** that visually mirrors the real-time state of the physical hardware:
+* **Water Level:** Programmatically scales the $Y$-axis of the water mesh based on raw capacitive sensor values.
+* **UV Light Glow:** Renders a glowing violet ambient light overlay when the UV light switch is engaged.
+* **Filter Pump Particles:** Emits a rising particle bubble system to indicate active water flow when the filter pump runs.
+* **Dirty Glass Texture:** Mapped onto the front pane, this green, cloudy texture gradually increases opacity as the accumulated lighting clock counts up, clearing back to transparent after a cleaning cycle completes.
 
-### 📊 Panel 2: Live View & Manual Commands
-Displays direct telemetry data from the local sensors and features sleek, modern switches with custom animation transitions:
-* **Telemetry Display:** Shows physical water level status, cumulative run-time logs, and a monospace countdown timer ($hh:mm:ss$) for the next feed.
-* **Filter Unit Switch:** Toggles the state of the primary AC filtration pump relay.
-* **UV Light Switch:** Toggles the germicidal UV sterilizer bulb.
-* **Manual Feeding Override:** Instantly activates the feeding servo, bypassing sensor checks.
-* **Forced Glass Clean:** Forces an instant cleaning sweep and resets the algae tracker clock.
+### 📊 Panel 2: Live Preview & Manual Commands (with pH Gauge)
+Houses real-time analog and digital telemetry coupled with physical overrides:
+* **Live Video Preview:** Contains the local HTTP MJPEG stream broadcast directly by the ESP32-CAM module to observe fish movement.
+* **pH Arc-Gauge Widget:** An interactive radial gauge displaying calibrated pH data (0.0 to 14.0) with custom color ranges for acidic, neutral, and alkaline states.
+* **Countdown Telemetry:** Monospaced clock ($hh:mm:ss$) showing the time remaining until the next automatic feed cycle.
+* **Manual Override Switches:** Interactive buttons to force an instant feed (bypassing the surface sensor), toggle the filtration pump relay, toggle the UV light relay, or trigger an unscheduled glass cleaning sweep.
 
-### 📜 Panel 3: Status & Historical Alerts Log
-Presents a clean, chronological timeline styled with color-coded operational cards to track system actions:
-* **Cyan (Routine):** Routine activities, such as filter pump cycles, light toggles, and successful feed releases.
-* **Amber (Automated Adjustments):** Auto-corrections, including skipped feed loops (due to organic waste detection) and active glass cleaning cycles.
-* **Red (Critical Alarms):** High-priority alerts requiring physical inspection, such as low water level alerts.
+### 📜 Panel 3: Chronological Notification Registry Logs
+A running history log of system-level activities, structured using distinct, color-coded status cards:
+* <span style="color:#06b6d4">**Cyan (Routine):**</span> Confirms normal operation events, such as manual override activations, successful feeding runs, and scheduled filtration triggers.
+* <span style="color:#f59e0b">**Amber (Automated Adjustments):**</span> Informs the user of system-managed corrections, including active glass cleaning sweeps and skipped feeds (overfeeding prevention).
+* <span style="color:#ef4444">**Red (Critical Alarms):**</span> Demands immediate physical attention, triggered by severe hardware faults or critical water level drops.
 
 ---
 
-## 🛡️ License & Safety Warning
+## Safety & Maintenance Fail-safe Disclaimers
 
-> [!WARNING]
-> This project is intended for educational and hobbyist aquarium use only. Ensure all high-voltage AC relays are housed inside a moisture-proof project enclosure away from water splash zones. Always use Ground Fault Circuit Interrupter (GFCI) outlets for high-voltage aquarium appliances to prevent electrical shock or hazard.
+> [!IMPORTANT]
+> **Electrical Safety Standard**
+> All high-voltage AC relays, ballasts, and connection blocks MUST be isolated inside a sealed, moisture-proof IP65-rated project enclosure placed completely away from potential water splash zones. Always plug high-voltage aquarium appliances (AC filter pumps and UV ballasts) into Ground Fault Circuit Interrupter (GFCI) outlets.
+
+> [!CAUTION]
+> **UV Radiation Exposure**
+> Germicidal Ultraviolet light (UV-C) is hazardous to human skin and eyes. Ensure the UV light module is fully shielded inside an opaque filter canister or enclosed chamber. Never operate the UV lamp outside its protective enclosure or look directly at an active bulb.
+
+> [!NOTE]
+> **Sensor Calibration & Fail-safe Mode**
+> The pH-4502C probe requires periodic manual calibration using buffer solutions (pH 4.01, 7.00, and 9.18) to prevent drift. All sensor inputs operate on pull-up/pull-down high-impedance states; if any sensor connection is severed or unplugged, the system defaults to a fail-safe alarm state (cutting power to UV/heaters and issuing a RED alert).
