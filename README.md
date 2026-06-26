@@ -4,6 +4,8 @@ A highly reliable, decentralized, and standalone aquarium management ecosystem p
 
 By prioritizing high-reliability local hardware loops over complex cloud networks, this bot ensures zero-latency task execution, maximum safety fail-safes, and a fully automated maintenance schedule—completely free of external dependencies or cloud connectivity.
 
+![System Concept](Concept.png)
+
 ---
 
 ## System Architecture Diagram
