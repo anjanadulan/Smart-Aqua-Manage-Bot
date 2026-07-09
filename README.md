@@ -57,7 +57,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 
 ### 🧼 4. Automated Glass Cleaning Functions
 * **Accumulated Run-Time Tracker & Logic:** Logs the cumulative running hours of the UV light and ambient lighting systems, which directly correlate to predicted algae accumulation rates. Every $168\text{ hours}$ (7 days) of total lighting runtime, the system flags the glass panel as degraded or "dirty."
-* **Automated Cleaning Cycle Activation:** The NodeMCU automatically triggers the High-Torque Stepper Motor driven by the Stepper Motor Driver Breakout Board, moving a magnetic glass-scraper carriage horizontally back and forth across the front pane.
+* **Automated Cleaning Cycle Activation:** The NodeMCU automatically triggers the High-Torque Stepper Motor driven by the Stepper Motor Driver Breakout Board (or CNC Shield V3), moving a magnetic glass-scraper carriage horizontally back and forth across the front pane.
 * **Web UI Maintenance Alert:** Pushes an amber status card reading *"Automated Glass Cleaning in Progress"* to the web timeline and applies a green, cloudy texture layer over the 3D tank interface model during active sweeps.
 * **Manual Reset & Run Switch:** A dashboard control button to force an instant glass cleaning cycle on demand and reset the accumulated run-time tracker back to zero.
 
@@ -74,9 +74,9 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 | **🧠 Core Controllers & Power** | **NodeMCU Microcontroller (ESP32 or ESP8266)** | Main controller running the schedules, monitoring logic, and sensor-actuator loops. |
 | | **ESP32-CAM Module** | Secondary processing module equipped with an OV2640 camera to stream MJPEG video feed. |
 | **🔌 Switching & Motor Drivers** | **5V Relay Board** | Digital low-voltage relay board to isolate and switch high-voltage AC filter pump and UV sterilizer loads. |
-| | **Stepper Motor Driver Breakout Board** | Breakout driver (e.g., A4988) to deliver high-current step and direction control pulses. |
+| | **Stepper Motor Driver Breakout Board (or CNC Shield V3)** | Driver carrier (e.g. A4988) or multi-axis shield to host drivers, control step/direction pulses, and supply motor power. |
 | **🧲 Actuators & Mechanical** | **SG90 Micro-Servo Motor** | High-precision mini servo to rotate the food-dispensing mechanism during feed cycles. |
-| | **High-Torque Stepper Motor** | NEMA-style stepper motor to drive the belt-driven magnetic glass-scraper carriage. |
+| **🧲 Actuators & Mechanical** | **High-Torque Stepper Motor** | NEMA-style stepper motor to drive the belt-driven magnetic glass-scraper carriage. |
 | **📡 Sensors & Water Quality** | **Infrared (IR) Obstacle Avoidance Sensor module** | Transmits and detects IR reflections to scan the feeding ring surface for leftovers. |
 | | **Analog pH Sensor (pH-4502C)** | Water testing probe with signal conditioning board to measure water acidity (pH). |
 | | **Capacitive Water Sensor** | Contactless capacitive sensor attached to the glass to monitor the water volume threshold. |

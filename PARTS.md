@@ -26,7 +26,7 @@ graph TD
     NodeMCU[NodeMCU ESP32 / ESP8266]:::logicPower
     ESP32_CAM[ESP32-CAM Module]:::logicPower
     RelayBoard[5V Relay Board]:::logicPower
-    StepperDriver[A4988 Stepper Driver Logic]:::logicPower
+    StepperDriver[A4988 Stepper / CNC Shield V3 Logic]:::logicPower
     SG90[SG90 Micro-Servo]:::logicPower
     IRSensor[IR Obstacle Sensor]:::logicPower
     CapWater[Capacitive Water Sensor]:::logicPower
@@ -58,7 +58,7 @@ graph TD
 ```
 
 ### 2. Wiring & Pin Interfacing Diagram
-Below is the wiring diagram demonstrating how sensor outputs route to the input pins of the NodeMCU, and how output pins drive relays and motor controllers. The ESP32-CAM operates independently on the local network, broadcasting the video stream over Wi-Fi.
+Below is the wiring diagram demonstrating how sensor outputs route to the input pins of the NodeMCU, and how output pins drive relays and motor controllers (or via the alternative CNC Shield V3 interface). The ESP32-CAM operates independently on the local network, broadcasting the video stream over Wi-Fi.
 
 ```mermaid
 graph TD
@@ -89,7 +89,7 @@ graph TD
 
     %% Output Actuators
     subgraph Output Actuators
-        A4988[A4988 Stepper Driver]
+        A4988["A4988 Driver (or CNC Shield V3 X-Axis)"]
         Servo[SG90 Micro-Servo]
         Relays[5V Dual-Channel Relay Board]
     end
@@ -128,6 +128,7 @@ graph TD
 | :---: | :--- | :--- | :--- | :---: |
 | ⚡ | **5V Relay Board** | 2-Channel, Opto-isolated, Songle SRD-05VDC-SL-C relays, load capacity 10A @ 250V AC. | Opto-isolates and switches mains AC power lines running the filter pump and UV sterilizer. | 1 |
 | 🛹 | **Stepper Motor Driver Breakout** | A4988 chip, adjustable current limiting, over-temperature thermal shutdown, 5 microstep resolutions. | Interfaces NodeMCU step/direction pulses to regulate phase currents flowing to the stepper motor. | 1 |
+| 🛹 | **CNC Shield V3 (Alternative)** | Multi-axis Arduino Uno Shield, houses A4988 drivers, built-in filter capacitors, reset/sleep jumpers, 12-36V input. | Alternative to breakout board; simplifies stepper wiring, power decoupling, and microstepping settings. | 1 |
 
 ### 🧲 3. Actuators & Mechanical Components
 | Part Image / Symbol | Component Name | Key Specifications | Primary Role in System | Qty |
@@ -151,11 +152,23 @@ graph TD
 | :--- | :--- | :--- | :--- | :--- |
 | **5V / Vin** | All 5V Boards | VCC / 5V / VDD | Power | 5V Logic voltage supply line |
 | **GND** | All Components | GND | Ground | Common system ground reference |
-| **D1 (GPIO 5)** | A4988 Driver | STEP | Digital Output | High/Low pulses to drive stepper distance and speed |
-| **D2 (GPIO 4)** | A4988 Driver | DIR | Digital Output | High (Forward) / Low (Reverse) direction control |
+| **D1 (GPIO 5)** | A4988 Driver / CNC Shield V3 | STEP / X.STEP pin | Digital Output | High/Low pulses to drive stepper distance and speed |
+| **D2 (GPIO 4)** | A4988 Driver / CNC Shield V3 | DIR / X.DIR pin | Digital Output | High (Forward) / Low (Reverse) direction control |
 | **D3 (GPIO 0)** | SG90 Servo | Signal (Orange) | PWM Output | Servo angle positioning signal (0 to 180 degrees) |
 | **D4 (GPIO 2)** | 5V Relay Ch 1 | IN1 (Filter Pump) | Digital Output | Active-Low signal triggering primary filter pump relay |
 | **D5 (GPIO 14)**| 5V Relay Ch 2 | IN2 (UV Light) | Digital Output | Active-Low signal triggering germicidal UV lamp relay |
 | **D6 (GPIO 12)**| IR Sensor | OUT | Digital Input | High (Clear) / Low (Obstacle/Food detected) |
 | **D7 (GPIO 13)**| Capacitive Sensor| OUT (Water Level) | Digital Input | High (Water Present) / Low (Water Below Level - Alarm) |
 | **A0 (ADC 0)**  | pH-4502C Board | PO (pH Output) | Analog Input | Voltage signal representation of water acidity level |
+
+---
+
+> [!NOTE]
+> **CNC Shield V3 Wiring Details:**
+> If you choose to use the CNC Shield V3 instead of the standalone A4988 breakout board:
+> 1. Use the **X-axis** driver slot on the shield for the stepper motor.
+> 2. Bridge the **Reset** and **Sleep** pins on the X-axis driver slot using a jumper cap.
+> 3. Connect NodeMCU D1 (GPIO 5) directly to the **X.STEP** header pin (corresponding to Arduino Uno D2 pin).
+> 4. Connect NodeMCU D2 (GPIO 4) directly to the **X.DIR** header pin (corresponding to Arduino Uno D5 pin).
+> 5. Wire NodeMCU 5V (Vin) to the shield's 5V input header, and NodeMCU GND to one of the shield's GND pins.
+> 6. Wire the external 12V power supply directly to the blue screw terminals on the CNC Shield.
