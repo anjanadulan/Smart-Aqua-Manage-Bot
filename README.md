@@ -1,4 +1,5 @@
-# Smart Aqua Manage Bot (v2.0)
+# Smart Aqua Manage and Cleaning Bot
+
 
 A highly reliable, decentralized, and standalone aquarium management ecosystem powered by local microcontrollers, physical sensors, and a real-time responsive 3D web interface. 
 
