@@ -134,7 +134,7 @@ graph TD
 | Part Image / Symbol | Component Name | Key Specifications | Primary Role in System | Qty |
 | :---: | :--- | :--- | :--- | :---: |
 | ⚙️ | **SG90 Micro-Servo Motor** | Operating torque: 1.8 kg-cm @ 4.8V, 180-degree rotation limit. | Rotates the feeder drum/gate to dispense dry food flakes during scheduled or manual cycles. | 1 |
-| 🏎️ | **High-Torque Stepper Motor** | NEMA 17, 1.8° step angle (200 steps/rev), 1.5A phase current, 45 Ncm holding torque. | Drives the timing belt/pulley assembly to sweep the magnetic glass scraper horizontally across the tank front. | 1 |
+| 🏎️ | **Stepper Motor (NEMA 17)** | Model: 17HS4023 "Pancake", 42x42x23mm, D-Shaft (5mm), 1.8° step angle, 0.7A-1.0A current rating. | Drives the timing belt/pulley assembly to sweep the magnetic glass scraper horizontally across the tank front. | 1 |
 | 🔧 | **Mechanical Mounting Kit** | GT2 Timing Belt (2m), GT2 Pulleys (20 teeth, 5mm bore), floating feeding ring, acrylic mounts. | Provides the structural brackets, pulleys, and tracks to physically build the scraper drive and feeding ring. | 1 |
 
 ### 📡 4. Sensors & Water Quality Tools
@@ -172,3 +172,13 @@ graph TD
 > 4. Connect NodeMCU D2 (GPIO 4) directly to the **X.DIR** header pin (corresponding to Arduino Uno D5 pin).
 > 5. Wire NodeMCU 5V (Vin) to the shield's 5V input header, and NodeMCU GND to one of the shield's GND pins.
 > 6. Wire the external 12V power supply directly to the blue screw terminals on the CNC Shield.
+
+> [!IMPORTANT]
+> **Stepper Motor Current Limit (\(V_{ref}\)) Tuning:**
+> Since the slim **17HS4023** stepper motor is rated for lower current (\(0.7\text{A} - 1.0\text{A}\)) than a standard NEMA 17, you **must** limit the driver's output current to prevent the motor from overheating:
+> 1. **Current Limit Target:** Limit the target output current to **\(0.6\text{A} - 0.7\text{A}\)** for optimal, cool operation.
+> 2. **Calculate \(V_{ref}\):** For standard A4988 drivers with \(0.1\,\Omega\) sensing resistors:
+>    \[
+>    V_{ref} = I_{limit} \times 8 \times R_{sense} \approx 0.7\text{ A} \times 8 \times 0.1 = 0.56\text{ V}
+>    \]
+> 3. **Hardware Tuning:** Connect your multimeter between the A4988 driver's screw potentiometer (positive probe) and the system Ground (negative probe). Slowly turn the potentiometer using a small screwdriver until it reads **`0.48V - 0.56V`**.
