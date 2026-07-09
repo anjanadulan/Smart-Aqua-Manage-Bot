@@ -42,7 +42,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 
 ### 🥖 1. Feeding & Automation Functions
 * **6-Hour Scheduled Feeding Loop:** A local script running on the NodeMCU automatically triggers a physical feeding cycle every 6 hours by driving the SG90 Micro-Servo Motor to release a portion of food.
-* **Local Surface Barrier Scan:** Before dropping food, the system scans the surface zone utilizing an Infrared (IR) Obstacle Avoidance Sensor module mounted inside a floating feeding ring.
+* **Local Surface Barrier Scan:** Before dropping food, the system scans the surface zone utilizing a KY-032 Infrared (IR) Obstacle Avoidance Sensor module (38kHz modulated) mounted inside a floating feeding ring.
 * **Intelligent Skip Override:** If the IR sensor detects unconsumed floating food remaining on the surface, the NodeMCU aborts the automated cycle immediately to prevent hazardous overfeeding and organic water decay.
 * **Monospace Countdown Telemetry:** Calculates and displays a precise numerical countdown ($hh:mm:ss$) on the web dashboard showing the remaining time until the next automatic feed.
 * **Physical Feed Override Button:** A dedicated dashboard switch that triggers the feeding servo immediately, completely bypassing the IR surface sensor check.
@@ -77,7 +77,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 | | **Stepper Motor Driver Breakout Board (or CNC Shield V3)** | Driver carrier (e.g. A4988) or multi-axis shield to host drivers, control step/direction pulses, and supply motor power. |
 | **🧲 Actuators & Mechanical** | **SG90 Micro-Servo Motor** | High-precision mini servo to rotate the food-dispensing mechanism during feed cycles. |
 | **🧲 Actuators & Mechanical** | **High-Torque Stepper Motor** | NEMA-style stepper motor to drive the belt-driven magnetic glass-scraper carriage. |
-| **📡 Sensors & Water Quality** | **Infrared (IR) Obstacle Avoidance Sensor module** | Transmits and detects IR reflections to scan the feeding ring surface for leftovers. |
+| **📡 Sensors & Water Quality** | **KY-032 IR Obstacle Avoidance Sensor** | 38kHz modulated frequency sensor to scan the feeding ring surface for leftovers with high ambient light immunity. |
 | | **Analog pH Sensor (pH-4502C)** | Water testing probe with signal conditioning board to measure water acidity (pH). |
 | | **Capacitive Water Sensor** | Contactless capacitive sensor attached to the glass to monitor the water volume threshold. |
 

@@ -72,6 +72,7 @@ graph TD
         Pin_D5[GPIO D5 / Relay 2]
         Pin_D6[GPIO D6 / IR Signal]
         Pin_D7[GPIO D7 / Water Level]
+        Pin_D8[GPIO D8 / IR Enable]
         Pin_A0[Analog A0 / pH Read]
     end
 
@@ -82,7 +83,7 @@ graph TD
 
     %% Sensor Inputs
     subgraph Input Sensors
-        IR[IR Obstacle Avoidance Sensor]
+        IR[KY-032 IR Sensor]
         Capacitive[Capacitive Water Sensor]
         pH[pH-4502C Sensor Board]
     end
@@ -96,6 +97,7 @@ graph TD
 
     %% Wiring Connections
     IR -->|Digital Out| Pin_D6
+    Pin_D8 -.->|Optional Enable Signal| IR
     Capacitive -->|Digital Out| Pin_D7
     pH -->|Analog Voltage Out| Pin_A0
 
@@ -140,7 +142,7 @@ graph TD
 ### 📡 4. Sensors & Water Quality Tools
 | Part Image / Symbol | Component Name | Key Specifications | Primary Role in System | Qty |
 | :---: | :--- | :--- | :--- | :---: |
-| 🚨 | **IR Obstacle Avoidance Sensor** | Active infrared transmitter/receiver, detection range 2-30cm, onboard comparator potentiometer. | Mounted above the floating feeding ring to detect floating leftover food and skip overfeeding. | 1 |
+| 🚨 | **KY-032 IR Sensor** | 38kHz modulated frequency, NE555 timer, active-low digital output, range 2-40cm, enable pin. | Mounted above the floating feeding ring; detects leftover floating food while ignoring ambient light reflections. | 1 |
 | 🧪 | **Analog pH Sensor (pH-4502C)** | Detection range pH 0-14, operating temperature 0-60°C, response time <1 min, calibration trimpots. | Submersed probe that outputs analog voltages proportional to the pH level to report aquarium water acidity. | 1 |
 | 💧 | **Capacitive Water Sensor** | Contactless capacitive level switch, liquid level detection thickness up to 10mm. | Fixed externally on the tank wall at the critical low-level mark to trigger emergency alarms. | 1 |
 
@@ -157,8 +159,9 @@ graph TD
 | **D3 (GPIO 0)** | SG90 Servo | Signal (Orange) | PWM Output | Servo angle positioning signal (0 to 180 degrees) |
 | **D4 (GPIO 2)** | 5V Relay Ch 1 | IN1 (Filter Pump) | Digital Output | Active-Low signal triggering primary filter pump relay |
 | **D5 (GPIO 14)**| 5V Relay Ch 2 | IN2 (UV Light) | Digital Output | Active-Low signal triggering germicidal UV lamp relay |
-| **D6 (GPIO 12)**| IR Sensor | OUT | Digital Input | High (Clear) / Low (Obstacle/Food detected) |
+| **D6 (GPIO 12)**| KY-032 IR Sensor | OUT | Digital Input | High (Clear) / Low (Leftover food detected) |
 | **D7 (GPIO 13)**| Capacitive Sensor| OUT (Water Level) | Digital Input | High (Water Present) / Low (Water Below Level - Alarm) |
+| **D8 (GPIO 15)**| KY-032 IR Sensor | EN (Optional) | Digital Output | Low (Enable) / High (Disable). Leave jumper cap on to bypass. |
 | **A0 (ADC 0)**  | pH-4502C Board | PO (pH Output) | Analog Input | Voltage signal representation of water acidity level |
 
 ---
