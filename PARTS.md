@@ -30,7 +30,7 @@ graph TD
     SG90[SG90 Micro-Servo]:::logicPower
     IRSensor[IR Obstacle Sensor]:::logicPower
     CapWater[Capacitive Water Sensor]:::logicPower
-    pHSensor[pH-4502C Sensor Board]:::logicPower
+    TDSSensor[TDS Sensor Board]:::logicPower
 
     %% High Power Devices
     StepperMotor[High-Torque Stepper Motor]:::motorPower
@@ -48,7 +48,7 @@ graph TD
     PSU_DC5V -->|5V VCC| RelayBoard
     PSU_DC5V -->|5V VCC| SG90
     PSU_DC5V -->|5V VDD| StepperDriver
-    PSU_DC5V -->|5V VCC| pHSensor
+    PSU_DC5V -->|5V VCC| TDSSensor
 
     PSU_DC12V -->|12V VMOT| StepperDriver
     StepperDriver -->|Driven Phase Lines| StepperMotor
@@ -73,7 +73,7 @@ graph TD
         Pin_D6[GPIO D6 / IR Signal]
         Pin_D7[GPIO D7 / Water Level]
         Pin_D8[GPIO D8 / IR Enable]
-        Pin_A0[Analog A0 / pH Read]
+        Pin_A0[Analog A0 / TDS Read]
     end
 
     subgraph Secondary Module [ESP32-CAM]
@@ -85,7 +85,7 @@ graph TD
     subgraph Input Sensors
         IR[KY-032 IR Sensor]
         Capacitive[Capacitive Water Sensor]
-        pH[pH-4502C Sensor Board]
+        TDS[TDS Sensor Board]
     end
 
     %% Output Actuators
@@ -99,7 +99,7 @@ graph TD
     IR -->|Digital Out| Pin_D6
     Pin_D8 -.->|Optional Enable Signal| IR
     Capacitive -->|Digital Out| Pin_D7
-    pH -->|Analog Voltage Out| Pin_A0
+    TDS -->|Analog Voltage Out| Pin_A0
 
     Pin_D1 -->|Step Pulses| A4988
     Pin_D2 -->|Direction Signal| A4988
@@ -143,7 +143,7 @@ graph TD
 | Part Image / Symbol | Component Name | Key Specifications | Primary Role in System | Qty |
 | :---: | :--- | :--- | :--- | :---: |
 | 🚨 | **KY-032 IR Sensor** | 38kHz modulated frequency, NE555 timer, active-low digital output, range 2-40cm, enable pin. | Mounted above the floating feeding ring; detects leftover floating food while ignoring ambient light reflections. | 1 |
-| 🧪 | **Analog pH Sensor (pH-4502C)** | Detection range pH 0-14, operating temperature 0-60°C, response time <1 min, calibration trimpots. | Submersed probe that outputs analog voltages proportional to the pH level to report aquarium water acidity. | 1 |
+| 🧪 | **Analog TDS Water Conductivity Sensor** | Output voltage 0 ~ 2.3V, operating voltage 3.3V ~ 5V, measurement range 0 ~ 1000ppm, accuracy ±10% F.S. | Measures electrical conductivity of dissolved solids to monitor water purity and schedule water changes. | 1 |
 | 💧 | **Capacitive Water Sensor** | Contactless capacitive level switch, liquid level detection thickness up to 10mm. | Fixed externally on the tank wall at the critical low-level mark to trigger emergency alarms. | 1 |
 
 ---
@@ -162,7 +162,7 @@ graph TD
 | **D6 (GPIO 12)**| KY-032 IR Sensor | OUT | Digital Input | High (Clear) / Low (Leftover food detected) |
 | **D7 (GPIO 13)**| Capacitive Sensor| OUT (Water Level) | Digital Input | High (Water Present) / Low (Water Below Level - Alarm) |
 | **D8 (GPIO 15)**| KY-032 IR Sensor | EN (Optional) | Digital Output | Low (Enable) / High (Disable). Leave jumper cap on to bypass. |
-| **A0 (ADC 0)**  | pH-4502C Board | PO (pH Output) | Analog Input | Voltage signal representation of water acidity level |
+| **A0 (ADC 0)**  | TDS Sensor Board | Analog Out | Analog Input | Voltage signal representing total dissolved solids concentration (ppm) |
 
 ---
 

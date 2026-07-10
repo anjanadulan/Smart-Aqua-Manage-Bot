@@ -51,17 +51,17 @@
                     <img id="camera-feed" class="preview-feed" src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=640&q=80" alt="ESP32-CAM Stream">
                 </div>
 
-                <!-- Telemetry Row: pH Gauge & Feed Countdown -->
+                <!-- Telemetry Row: TDS Gauge & Feed Countdown -->
                 <div class="telemetry-row">
-                    <!-- Analog pH Arc-Gauge -->
+                    <!-- Analog TDS Arc-Gauge -->
                     <div class="telemetry-card ph-card">
                         <svg class="ph-gauge-svg">
                             <circle class="ph-gauge-bg" cx="55" cy="55" r="40"></circle>
-                            <circle id="ph-gauge-fill" class="ph-gauge-fill" cx="55" cy="55" r="40"></circle>
+                            <circle id="tds-gauge-fill" class="ph-gauge-fill" cx="55" cy="55" r="40"></circle>
                         </svg>
                         <div class="ph-value-display">
-                            <span id="ph-val" class="ph-number">7.0</span>
-                            <span class="ph-label">Water pH</span>
+                            <span id="tds-val" class="ph-number">150</span>
+                            <span class="ph-label">Water TDS (ppm)</span>
                         </div>
                     </div>
 
@@ -152,13 +152,13 @@
             <input type="range" id="sim-water-level" class="sim-input-range" min="0" max="100" value="95">
         </div>
 
-        <!-- pH Level Slider -->
+        <!-- TDS Level Slider -->
         <div class="sim-control-row">
-            <label for="sim-ph-level">
-                Analog pH-4502C Volts:
-                <span id="sim-ph-val" class="sim-value-label">7.2</span>
+            <label for="sim-tds-level">
+                Analog TDS Output:
+                <span id="sim-tds-val" class="sim-value-label">150 ppm</span>
             </label>
-            <input type="range" id="sim-ph-level" class="sim-input-range" min="0" max="140" value="72">
+            <input type="range" id="sim-tds-level" class="sim-input-range" min="0" max="1000" value="150">
         </div>
 
         <!-- IR Surface Scan Obstacle -->

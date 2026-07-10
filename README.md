@@ -63,7 +63,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 * **Manual Reset & Run Switch:** A dashboard control button to force an instant glass cleaning cycle on demand and reset the accumulated run-time tracker back to zero.
 
 ### 🧪 5. Water Quality & Fish Monitoring Functions
-* **pH Level Monitoring Function:** Captures raw analog signals from the Analog pH Sensor (pH-4502C), runs calibration algorithms locally on the NodeMCU, and streams real-time water acidity updates to an interactive arc-gauge widget on the dashboard.
+* **TDS Water Quality Monitoring Function:** Captures raw analog signals from the Analog TDS Water Conductivity Sensor, processes water salinity/mineral levels locally on the NodeMCU, and streams real-time total dissolved solids updates (in ppm) to an interactive arc-gauge widget on the dashboard.
 * **Fish Movement & Video Monitoring Function:** The independent ESP32-CAM Module hosts a localized HTTP MJPEG video stream broadcasted straight to a Live Preview container frame on the web dashboard for remote physical inspection.
 
 ---
@@ -79,7 +79,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 | **🧲 Actuators & Mechanical** | **SG90 Micro-Servo Motor** | High-precision mini servo to rotate the food-dispensing mechanism during feed cycles. |
 | **🧲 Actuators & Mechanical** | **High-Torque Stepper Motor** | NEMA-style stepper motor to drive the belt-driven magnetic glass-scraper carriage. |
 | **📡 Sensors & Water Quality** | **KY-032 IR Obstacle Avoidance Sensor** | 38kHz modulated frequency sensor to scan the feeding ring surface for leftovers with high ambient light immunity. |
-| | **Analog pH Sensor (pH-4502C)** | Water testing probe with signal conditioning board to measure water acidity (pH). |
+| | **Analog TDS Water Conductivity Sensor** | Total Dissolved Solids probe with signal conditioning board to measure dissolved mineral concentration and purity (in ppm). |
 | | **Capacitive Water Sensor** | Contactless capacitive sensor attached to the glass to monitor the water volume threshold. |
 
 ---
@@ -96,9 +96,9 @@ The user interface is structured as a unified, fully responsive single-page dash
 |                          |                              |                       |
 |   [ 3D Viewport ]        |  [ Live Video Stream ]       |  Timeline Registry:   |
 |                          |  - (ESP32-CAM MJPEG Feed)    |                       |
-|   * Dynamic Y-Scale      |                              |  [Cyan] Filter Active |
-|     Water Mesh           |  [ pH Level Arc-Gauge ]      |  [Cyan] UV Lamp ON    |
-|                          |  - Real-time pH: 7.2         |                       |
+|   * Dynamic Y-Scale      |  [ TDS Purity Arc-Gauge ]    |  [Cyan] Filter Active |
+|     Water Mesh           |  - Real-time TDS: 150 ppm    |  [Cyan] UV Lamp ON    |
+|                          |                              |                       |
 |   * UV violet ambient    |                              |  [Amber] Cleaning...  |
 |     glow overlay         |  [ Telemetry & Countdown ]   |                       |
 |                          |                              |  [Amber] Feed Skipped |
@@ -115,10 +115,10 @@ An interactive 3D render of the aquarium tank using **Three.js** that visually m
 * **Filter Pump Particles:** Emits a rising particle bubble system to indicate active water flow when the filter pump runs.
 * **Dirty Glass Texture:** Mapped onto the front pane, this green, cloudy texture gradually increases opacity as the accumulated lighting clock counts up, clearing back to transparent after a cleaning cycle completes.
 
-### 📊 Panel 2: Live Preview & Manual Commands (with pH Gauge)
+### 📊 Panel 2: Live Preview & Manual Commands (with TDS Gauge)
 Houses real-time analog and digital telemetry coupled with physical overrides:
 * **Live Video Preview:** Contains the local HTTP MJPEG stream broadcast directly by the ESP32-CAM module to observe fish movement.
-* **pH Arc-Gauge Widget:** An interactive radial gauge displaying calibrated pH data (0.0 to 14.0) with custom color ranges for acidic, neutral, and alkaline states.
+* **TDS Arc-Gauge Widget:** An interactive radial gauge displaying calibrated Total Dissolved Solids data in ppm (0 to 1000 ppm) with custom color ranges for pure, ideal, and high-solid mineral accumulation states.
 * **Countdown Telemetry:** Monospaced clock ($hh:mm:ss$) showing the time remaining until the next automatic feed cycle.
 * **Manual Override Switches:** Interactive buttons to force an instant feed (bypassing the surface sensor), toggle the filtration pump relay, toggle the UV light relay, or trigger an unscheduled glass cleaning sweep.
 

@@ -14,7 +14,7 @@ const state = {
     filterActive: true,
     uvActive: false,
     waterLevel: 95,          // percentage (0-100)
-    pHValue: 7.2,            // 0.0 - 14.0
+    tdsValue: 150,           // total dissolved solids (ppm, 0-1000)
     irObstacle: false,       // leftover food detected
     algaeClock: 0,           // hours (0 - 168)
     nextFeedSeconds: 21599,  // 6 hours in seconds (5h 59m 59s)
@@ -33,16 +33,16 @@ const resetScraperBtn = document.getElementById('reset-scraper-btn');
 const clearLogsBtn = document.getElementById('clear-logs-btn');
 const logRegistry = document.getElementById('log-registry');
 const countdownTimer = document.getElementById('countdown-timer');
-const phValDisplay = document.getElementById('ph-val');
-const phGaugeFill = document.getElementById('ph-gauge-fill');
+const tdsValDisplay = document.getElementById('tds-val');
+const tdsGaugeFill = document.getElementById('tds-gauge-fill');
 const scraperStatusText = document.getElementById('scraper-status');
 const resetCamBtn = document.getElementById('reset-cam-btn');
 
 // Simulator inputs
 const simWaterLevel = document.getElementById('sim-water-level');
 const simWaterVal = document.getElementById('sim-water-val');
-const simPhLevel = document.getElementById('sim-ph-level');
-const simPhVal = document.getElementById('sim-ph-val');
+const simTdsLevel = document.getElementById('sim-tds-level');
+const simTdsVal = document.getElementById('sim-tds-val');
 const simIrObstacle = document.getElementById('sim-ir-obstacle');
 
 // Initialize Dashboard
@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addLog('system', 'cyan', 'Smart Aqua Manage Bot startup complete.');
     addLog('system', 'cyan', 'Filter pump loop active on local relay channel 1.');
     addLog('scheduler', 'cyan', '6-Hour feeding countdown initialized.');
+    updateTDSDisplay();
 });
 
 // ==========================================
@@ -393,13 +394,13 @@ function startTelemetryLoops() {
         }
     }, 1000);
 
-    // 3. Periodic pH calibration fluctuation (every 3 seconds)
+    // 3. Periodic TDS accumulation fluctuation (every 3 seconds)
     setInterval(() => {
         if (!state.cleaningInProgress) {
-            // Add tiny random fluctuation to simulated pH
-            const phDelta = (Math.random() - 0.5) * 0.05;
-            state.pHValue = Math.max(3.0, Math.min(11.0, state.pHValue + phDelta));
-            updatepHDisplay();
+            // Slowly increase TDS to simulate dissolved solids accumulating
+            const tdsDelta = Math.random() * 2;
+            state.tdsValue = Math.min(1000, state.tdsValue + tdsDelta);
+            updateTDSDisplay();
         }
     }, 3000);
 }
@@ -466,26 +467,26 @@ function updateCountdownTimer() {
     countdownTimer.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-function updatepHDisplay() {
-    const ph = state.pHValue.toFixed(2);
-    phValDisplay.textContent = ph;
+function updateTDSDisplay() {
+    const tds = Math.round(state.tdsValue);
+    tdsValDisplay.textContent = tds;
 
-    // Map pH (0-14) to stroke-dashoffset (251.2 = empty, 0 = full)
+    // Map TDS (0-1000) to stroke-dashoffset (251.2 = empty, 0 = full)
     const circumference = 251.2;
-    const progress = state.pHValue / 14;
+    const progress = state.tdsValue / 1000;
     const offset = circumference - (progress * circumference);
-    phGaugeFill.style.strokeDashoffset = offset;
+    tdsGaugeFill.style.strokeDashoffset = offset;
 
-    // Dynamic color shifting for pH (red for acidic, green for neutral, blue for alkaline)
-    if (state.pHValue < 6.0) {
-        phGaugeFill.style.stroke = 'var(--color-red)';
-        phValDisplay.style.color = 'var(--color-red)';
-    } else if (state.pHValue > 8.0) {
-        phGaugeFill.style.stroke = 'var(--color-violet)';
-        phValDisplay.style.color = 'var(--color-violet)';
+    // Dynamic color shifting for TDS (cyan for pure ideal < 200, green for average 200-500, amber for high > 500)
+    if (state.tdsValue < 200) {
+        tdsGaugeFill.style.stroke = 'var(--color-cyan)';
+        tdsValDisplay.style.color = 'var(--color-cyan)';
+    } else if (state.tdsValue <= 500) {
+        tdsGaugeFill.style.stroke = 'var(--color-green)';
+        tdsValDisplay.style.color = 'var(--color-green)';
     } else {
-        phGaugeFill.style.stroke = 'var(--color-cyan)';
-        phValDisplay.style.color = 'var(--color-cyan)';
+        tdsGaugeFill.style.stroke = 'var(--color-amber)';
+        tdsValDisplay.style.color = 'var(--color-amber)';
     }
 }
 
@@ -606,12 +607,12 @@ function setupSimulator() {
         }
     });
 
-    // 2. pH Voltage Slider
-    simPhLevel.addEventListener('input', (e) => {
-        const val = parseFloat(e.target.value) / 10;
-        state.pHValue = val;
-        simPhVal.textContent = val.toFixed(1);
-        updatepHDisplay();
+    // 2. TDS Level Slider
+    simTdsLevel.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        state.tdsValue = val;
+        simTdsVal.textContent = val + ' ppm';
+        updateTDSDisplay();
     });
 
     // 3. IR Sensor Obstacle
