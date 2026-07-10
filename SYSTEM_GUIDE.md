@@ -159,6 +159,76 @@ sequenceDiagram
     End
 ```
 
+### Pointwise Function & Trigger Matrix
+
+#### 1. System Boot & Initialization
+* **Function:** Configures logic states and establishes local network interfaces.
+* **Trigger:** Hardware Power-On or Manual Reset button on the NodeMCU.
+* **Actions:**
+  * Pulls stepper motor drivers and relay outputs `HIGH` (default off states).
+  * Boots the local Wi-Fi interface (Access Point or Station).
+  * Starts Port 80 Web Server (Dashboard), Port 81 MJPEG Server (Video), and Port 82 WebSocket Server (Telemetry).
+  * Initializes the `6-Hour Feeding Timer` and `168-Hour Algae Accumulation Clock`.
+
+#### 2. WebSocket Telemetry Broadcast
+* **Function:** Transmits real-time physical sensor data to the dashboard interface.
+* **Trigger:** Internal 1-second interval scheduler using `millis()`.
+* **Actions:**
+  * Polls the Capacitive Water Level Sensor and calculates the rolling average voltage of the analog TDS probe.
+  * Formats variables into a JSON packet: `{"filter": bool, "uv": bool, "tds": int, "water": int, "countdown": int, "algae": float}`.
+  * Broadcasts the payload over the WebSockets port to all active clients.
+  * Updates Three.js scale values and dynamic dashboard gauges.
+
+#### 3. Scheduled Automatic Feeding
+* **Function:** Safely dispenses fish food using optical verification.
+* **Trigger:** The 6-Hour Feeding timer counts down to zero.
+* **Actions:**
+  * NodeMCU boots the KY-032 IR Obstacle avoidance sensor.
+  * **IR Scan Check:**
+    * **If food leftovers remain on water surface:** IR receiver detects the reflected 38kHz signal. NodeMCU aborts the feeding cycle, resets the countdown to 6 hours, and sends an **Amber alert** to the web timeline ("Intelligent Skip Override").
+    * **If water surface is clear:** IR receiver reads `HIGH` (no signal bounce). NodeMCU activates the SG90 servo motor (spins 180 degrees and back) to dispense food, resets the countdown, and sends a **Cyan routine card** ("Scheduled Feed Successful").
+
+#### 4. Manual Feed Override
+* **Function:** Forces an instant feeding cycle for testing or manual care.
+* **Trigger:** User clicks the **"FEED NOW"** button on the Web Dashboard.
+* **Actions:**
+  * Web app transmits a `"FEED_NOW"` payload over the WebSocket socket.
+  * NodeMCU instantly drives the SG90 servo to dispense food, completely **bypassing** the KY-032 IR sensor check.
+  * Resets the 6-Hour countdown clock to maximum and logs the action on the timeline (Cyan card).
+
+#### 5. Automated Glass Cleaning
+* **Function:** Automatically sweeps a cleaning brush across the glass using 2-axis CNC coordinates.
+* **Trigger:** Light/UV cumulative runtime clock reaches **168 hours** (7 days).
+* **Actions:**
+  * NodeMCU flags the pane as dirty, pushes an **Amber warning card** ("Automated Glass Cleaning in Progress") to the web timeline, and applies the green algae texture to the Three.js viewport.
+  * NodeMCU pulls the A4988 driver enable pin `LOW` (active).
+  * Steppers execute a raster sweep: X-motor moves vertical rail horizontally left-to-right, while Y-motor sweeps brush vertically up-and-down.
+  * Once the grid sweep is completed, the gantry returns to the home position, the driver is disabled, the algae clock resets to 0 hours, and the green texture opacity in the UI fades back to clear.
+
+#### 6. Manual Glass Cleaning Sweep
+* **Function:** Forces an unscheduled cleaning sweep on demand.
+* **Trigger:** User clicks the **"CLEAN GLASS"** button on the Web Dashboard.
+* **Actions:**
+  * Dashboard sends a `"CLEAN_NOW"` WebSocket payload.
+  * NodeMCU instantly starts the 2-Axis CNC raster cleaning sweep (bypassing the 168-hour light clock limit), clears the algae texture opacity, resets the runtime clock to 0, and logs the sweep.
+
+#### 7. Filter & UV Lamp Control
+* **Function:** Toggles AC-powered filtration and sterilizer ballasts.
+* **Trigger:** User toggles the **"Filter Pump"** or **"UV Sterilizer"** switches on the Web Dashboard.
+* **Actions:**
+  * Toggles transmit `"FILTER_TOGGLE"` or `"UV_TOGGLE"` payloads.
+  * NodeMCU switches the respective 5V Relay Board channel state (Relay 1 or Relay 2).
+  * Dashboard triggers corresponding UI updates: initiates Three.js rising particle bubble streams (for active filtration) or fades in the violet ambient PointLight overlay (for active UV).
+
+#### 8. Critical Low Water Alarm (Direct Safety Routing)
+* **Function:** Failsafe protection loop to prevent equipment damage and electrical hazards.
+* **Trigger:** Capacitive Water Level Sensor detects a water level drop below the safety limit (switches state to `LOW`).
+* **Actions:**
+  * Triggers an immediate safety interrupt callback on the NodeMCU.
+  * NodeMCU **immediately cuts power** to the AC heater and UV sterilizer relay channels to prevent dry-running/fire hazards.
+  * Routes a high-priority **Red alarm card** ("CRITICAL WATER LEVEL DROP DETECTED") to the top of the timeline registry and flashes the 3D viewport canvas red.
+  * **Normal State Restore:** Once the capacitive sensor registers water presence again (switches back to `HIGH`), the alarm is cleared and standard operation is restored.
+
 ### State Machine Flow
 ```mermaid
 stateDiagram-v2
