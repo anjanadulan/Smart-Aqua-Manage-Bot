@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Aqua Manage Bot (v2.0) - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Top Header Navigation -->
+    <header>
+        <h1>SMART AQUA MANAGE BOT (v2.0)</h1>
+        <div class="system-status">
+            <span class="status-dot"></span>
+            <span>STANDALONE LOCAL LOOP (ACTIVE)</span>
+        </div>
+    </header>
+
+    <!-- Main Grid Dashboard Layout -->
+    <main class="dashboard-grid">
+        
+        <!-- Panel 1: 3D Viewport Control Center -->
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Panel 1: Control Center (3D Viewport)</h2>
+                <span class="btn-action" id="reset-cam-btn">RESET CAMERA</span>
+            </div>
+            <div class="panel-body" style="padding: 0; position: relative;">
+                <div class="viewport-overlay">
+                    <span>3D MODEL SIMULATOR (THREE.JS)</span>
+                </div>
+                <div id="viewport-container"></div>
+            </div>
+        </section>
+
+        <!-- Panel 2: Live View & Telemetry / Commands -->
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Panel 2: Live View & Commands</h2>
+            </div>
+            <div class="panel-body">
+                
+                <!-- ESP32-CAM Feed -->
+                <div class="preview-container">
+                    <div class="preview-overlay">
+                        <span class="live-dot"></span>
+                        <span>ESP32-CAM STREAM</span>
+                    </div>
+                    <!-- Live feed placeholder using a simulated ocean/fish loop, fallback is local frame -->
+                    <img id="camera-feed" class="preview-feed" src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=640&q=80" alt="ESP32-CAM Stream">
+                </div>
+
+                <!-- Telemetry Row: pH Gauge & Feed Countdown -->
+                <div class="telemetry-row">
+                    <!-- Analog pH Arc-Gauge -->
+                    <div class="telemetry-card ph-card">
+                        <svg class="ph-gauge-svg">
+                            <circle class="ph-gauge-bg" cx="55" cy="55" r="40"></circle>
+                            <circle id="ph-gauge-fill" class="ph-gauge-fill" cx="55" cy="55" r="40"></circle>
+                        </svg>
+                        <div class="ph-value-display">
+                            <span id="ph-val" class="ph-number">7.0</span>
+                            <span class="ph-label">Water pH</span>
+                        </div>
+                    </div>
+
+                    <!-- Monospace Feeding Countdown -->
+                    <div class="telemetry-card">
+                        <div class="countdown-display">
+                            <div class="countdown-label">Next Automatic Feed</div>
+                            <div id="countdown-timer" class="countdown-time">05:59:59</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Buttons Grid -->
+                <div class="controls-grid">
+                    <div class="control-item">
+                        <div class="control-info">
+                            <h4>Filter Pump</h4>
+                            <p>5V Relay Channel 1</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="filter-switch" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="control-item">
+                        <div class="control-info">
+                            <h4>UV Sterilizer</h4>
+                            <p>5V Relay Channel 2</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="uv-switch">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="control-item" style="grid-column: span 2;">
+                        <div class="control-info">
+                            <h4>Manual Feed Override</h4>
+                            <p>Bypasses IR scan sensor</p>
+                        </div>
+                        <button class="btn-action btn-override" id="feed-override-btn">FEED NOW</button>
+                    </div>
+
+                    <div class="control-item" style="grid-column: span 2;">
+                        <div class="control-info">
+                            <h4>Automated Glass Scraper</h4>
+                            <p id="scraper-status">Tracker: 0.0 hrs / 168 hrs</p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn-action" id="clean-now-btn">CLEAN GLASS</button>
+                            <button class="btn-action" id="reset-scraper-btn" style="border-color: rgba(255,255,255,0.15)">RESET</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Panel 3: Status & Historical Alerts Log -->
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Panel 3: Status & Notification Registry</h2>
+                <span class="btn-action" id="clear-logs-btn" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">CLEAR</span>
+            </div>
+            <div class="panel-body">
+                <div class="log-registry" id="log-registry">
+                    <!-- Log Cards will be appended dynamically by app.js -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Floating Interactive Telemetry Simulator -->
+    <div class="simulator-panel">
+        <div class="simulator-title">
+            <span>Hardware Simulator</span>
+            <span style="font-size: 0.65rem; opacity: 0.7;">Offline Mode</span>
+        </div>
+
+        <!-- Water Level Slider -->
+        <div class="sim-control-row">
+            <label for="sim-water-level">
+                Water Level Sensor:
+                <span id="sim-water-val" class="sim-value-label">Normal</span>
+            </label>
+            <input type="range" id="sim-water-level" class="sim-input-range" min="0" max="100" value="95">
+        </div>
+
+        <!-- pH Level Slider -->
+        <div class="sim-control-row">
+            <label for="sim-ph-level">
+                Analog pH-4502C Volts:
+                <span id="sim-ph-val" class="sim-value-label">7.2</span>
+            </label>
+            <input type="range" id="sim-ph-level" class="sim-input-range" min="0" max="140" value="72">
+        </div>
+
+        <!-- IR Surface Scan Obstacle -->
+        <div class="sim-control-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+            <label style="margin-bottom: 0;">IR Food Leftover Detected:</label>
+            <label class="switch" style="transform: scale(0.85);">
+                <input type="checkbox" id="sim-ir-obstacle">
+                <span class="slider" style="background-color: rgba(245, 158, 11, 0.1);"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Script Imports -->
+    <!-- CDNs are used for standard Three.js packages to ensure offline caching capability once loaded -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,566 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+    --bg-dark: #070a13;
+    --bg-panel: rgba(15, 23, 42, 0.55);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    
+    /* Neon Colors */
+    --color-cyan: #06b6d4;
+    --color-cyan-glow: rgba(6, 182, 212, 0.25);
+    --color-violet: #a855f7;
+    --color-violet-glow: rgba(168, 85, 247, 0.25);
+    --color-amber: #f59e0b;
+    --color-amber-glow: rgba(245, 158, 11, 0.25);
+    --color-red: #ef4444;
+    --color-red-glow: rgba(239, 68, 68, 0.25);
+    --color-green: #10b981;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.05) 0%, transparent 40%);
+}
+
+/* Header */
+header {
+    width: 100%;
+    padding: 1.25rem 2rem;
+    background: rgba(15, 23, 42, 0.8);
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    position: relative;
+}
+
+header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(to right, #fff, var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-green);
+    background: rgba(16, 185, 129, 0.1);
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-green);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--color-green);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Dashboard Layout */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 0.9fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    height: calc(100vh - 75px);
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow-y: auto;
+    }
+}
+
+/* Base Panel Styles */
+.panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.panel-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+}
+
+/* Panel 1: Viewport */
+#viewport-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    cursor: grab;
+}
+
+#viewport-container:active {
+    cursor: grabbing;
+}
+
+.viewport-overlay {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.7);
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Panel 2: Live View & Telemetry */
+.preview-container {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.preview-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.85;
+}
+
+.preview-overlay {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background: rgba(239, 68, 68, 0.8);
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.live-dot {
+    width: 6px;
+    height: 6px;
+    background-color: #fff;
+    border-radius: 50%;
+    animation: flash 1s infinite alternate;
+}
+
+@keyframes flash {
+    0% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* Gauge & Grid */
+.telemetry-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.telemetry-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+
+.telemetry-card.ph-card {
+    align-items: center;
+    justify-content: center;
+    height: 160px;
+}
+
+.ph-gauge-svg {
+    width: 110px;
+    height: 110px;
+    transform: rotate(-90deg);
+}
+
+.ph-gauge-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 8;
+}
+
+.ph-gauge-fill {
+    fill: none;
+    stroke: var(--color-cyan);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 251.2;
+    stroke-dashoffset: 251.2;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+}
+
+.ph-value-display {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.ph-number {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.ph-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.countdown-display {
+    text-align: center;
+}
+
+.countdown-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.4rem;
+}
+
+.countdown-time {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2rem;
+    color: var(--color-cyan);
+    text-shadow: 0 0 10px var(--color-cyan-glow);
+    background: rgba(6, 182, 212, 0.05);
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(6, 182, 212, 0.15);
+}
+
+/* Control Controls Grid */
+.controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.control-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.control-info h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.control-info p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Toggle Switch Styling */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: .3s;
+    border-radius: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--text-secondary);
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--color-cyan-glow);
+    border-color: var(--color-cyan);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+    background-color: var(--color-cyan);
+    box-shadow: 0 0 8px var(--color-cyan);
+}
+
+/* Action Button */
+.btn-action {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-action:active {
+    transform: scale(0.97);
+}
+
+.btn-override {
+    border-color: var(--color-amber);
+    color: var(--color-amber);
+    background: rgba(245, 158, 11, 0.03);
+}
+
+.btn-override:hover {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: var(--color-amber);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+/* Panel 3: Timeline Logs */
+.log-registry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.log-card {
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    animation: slideIn 0.3s ease;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.log-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.log-time {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text-secondary);
+}
+
+/* Color Coding Log Cards */
+.log-card.cyan {
+    border-left: 3px solid var(--color-cyan);
+    background: linear-gradient(to right, rgba(6, 182, 212, 0.03), transparent);
+}
+.log-card.cyan .log-category {
+    color: var(--color-cyan);
+}
+
+.log-card.amber {
+    border-left: 3px solid var(--color-amber);
+    background: linear-gradient(to right, rgba(245, 158, 11, 0.03), transparent);
+}
+.log-card.amber .log-category {
+    color: var(--color-amber);
+}
+
+.log-card.red {
+    border-left: 3px solid var(--color-red);
+    background: linear-gradient(to right, rgba(239, 68, 68, 0.03), transparent);
+    animation: shake 0.5s ease;
+}
+.log-card.red .log-category {
+    color: var(--color-red);
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+}
+
+/* Simulation Controls Overlay (Floating) */
+.simulator-panel {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.85rem 1.25rem;
+    backdrop-filter: blur(12px);
+    z-index: 5;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    width: 280px;
+}
+
+@media (max-width: 1200px) {
+    .simulator-panel {
+        position: relative;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        margin-top: 1.5rem;
+    }
+}
+
+.simulator-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-amber);
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.sim-control-row {
+    margin-bottom: 0.65rem;
+}
+
+.sim-control-row label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.sim-input-range {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.sim-input-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--color-amber);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 5px var(--color-amber);
+}
+
+.sim-value-label {
+    float: right;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text-primary);
+}
