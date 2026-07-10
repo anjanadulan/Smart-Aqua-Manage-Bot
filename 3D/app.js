@@ -175,15 +175,36 @@ function buildAquarium() {
     glassPane.position.set(0, 2.5, 1.96); // Exactly on the front pane surface
     scene.add(glassPane);
 
-    // 5. Motorized Glass Scraper Block (Carriage)
-    const scraperGeo = new THREE.BoxGeometry(0.6, 0.8, 0.2);
-    const scraperMat = new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
-        roughness: 0.2,
-        metalness: 0.9
+    // 5. CNC Gantry Rails (Two horizontal steel rails across the front pane)
+    const railGeo = new THREE.CylinderGeometry(0.04, 0.04, 7.8, 8);
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.9, roughness: 0.1 });
+    
+    const topRail = new THREE.Mesh(railGeo, railMat);
+    topRail.rotation.z = Math.PI / 2;
+    topRail.position.set(0, 4.6, 2.02);
+    scene.add(topRail);
+
+    const bottomRail = new THREE.Mesh(railGeo, railMat);
+    bottomRail.rotation.z = Math.PI / 2;
+    bottomRail.position.set(0, 0.4, 2.02);
+    scene.add(bottomRail);
+
+    // Vertical CNC gantry rail (slides horizontally along top/bottom rails)
+    const vertRailGeo = new THREE.CylinderGeometry(0.04, 0.04, 4.2, 8);
+    const vertRail = new THREE.Mesh(vertRailGeo, railMat);
+    vertRail.position.set(-3.4, 2.5, 2.02);
+    scene.add(vertRail);
+    state.vertRail = vertRail; // save reference to move horizontally
+
+    // 6. CNC Cleaning Brush Carriage (slides vertically on the vertical rail)
+    const brushGeo = new THREE.BoxGeometry(0.6, 0.5, 0.15);
+    const brushMat = new THREE.MeshStandardMaterial({
+        color: 0x3b82f6, // blue brush casing
+        roughness: 0.5,
+        metalness: 0.2
     });
-    scraperBlock = new THREE.Mesh(scraperGeo, scraperMat);
-    scraperBlock.position.set(-3.4, 2.5, 2.05); // Placed outside front pane
+    scraperBlock = new THREE.Mesh(brushGeo, brushMat);
+    scraperBlock.position.set(-3.4, 4.2, 2.1); // placed on the vertical rail
     scene.add(scraperBlock);
 
     // Add a simple grid/floor
@@ -264,12 +285,19 @@ function animate() {
     const algaeFactor = state.algaeClock / 168; // 0 to 1
     glassPane.material.opacity = THREE.MathUtils.lerp(glassPane.material.opacity, algaeFactor * 0.7, 0.05);
 
-    // 5. Motorized Glass Scraper Carriage Animation
+    // 5. 2-Axis CNC Cleaning Brush Gantry Animation
     if (state.cleaningInProgress) {
-        // Move scraper carriage horizontally (-3.4 to 3.4)
-        const speed = 0.05;
+        // Move vertical rail and brush horizontally (-3.4 to 3.4)
+        const speed = 0.04;
         state.cleanerProgress += speed * state.cleanerDirection;
+        
+        if (state.vertRail) {
+            state.vertRail.position.x = state.cleanerProgress;
+        }
+        
+        // X-axis coordinate moves left/right, Y-axis oscillates up/down (CNC sweep)
         scraperBlock.position.x = state.cleanerProgress;
+        scraperBlock.position.y = 2.5 + Math.sin(state.cleanerProgress * 5) * 1.8;
 
         if (state.cleanerProgress >= 3.4) {
             state.cleanerDirection = -1;
@@ -279,7 +307,8 @@ function animate() {
             if (state.cleanerCycles >= 2) {
                 // Done 2 complete sweeps, finish cleaning
                 state.cleaningInProgress = false;
-                addLog('cleaner', 'cyan', 'Automated glass cleaning cycle completed successfully.');
+                scraperBlock.position.y = 4.2; // home brush
+                addLog('cleaner', 'cyan', 'CNC gantry glass brush cleaning cycle completed.');
                 state.algaeClock = 0; // Reset algae run-time clock
                 updateScraperStatus();
                 // Remove warning block
@@ -287,12 +316,8 @@ function animate() {
             }
         }
         
-        // Clean glass dynamically in front of the moving scraper
-        if (state.cleanerDirection === 1) {
-            // Clearing glass behind the right-moving scraper
-            // (Simply done visually as a smooth reset back to clear pane)
-            glassPane.material.opacity = Math.max(0, glassPane.material.opacity - 0.01);
-        }
+        // Clean glass dynamically as the brush sweeps
+        glassPane.material.opacity = Math.max(0, glassPane.material.opacity - 0.012);
     }
 
     renderer.render(scene, camera);
@@ -408,7 +433,7 @@ function startTelemetryLoops() {
 // Trigger Feeding Logic (Physical specification matrix 1)
 function triggerFeedCycle(bypassIR) {
     if (state.cleaningInProgress) {
-        addLog('scheduler', 'amber', 'Feeding aborted: Scraper drive active in tank front zone.');
+        addLog('scheduler', 'amber', 'Feeding aborted: CNC brush gantry active in tank front zone.');
         state.nextFeedSeconds = 21599; // reset countdown
         return;
     }
@@ -419,7 +444,7 @@ function triggerFeedCycle(bypassIR) {
     setTimeout(() => {
         // If food leftovers detected and NOT overridden by manual button
         if (state.irObstacle && !bypassIR) {
-            addLog('scheduler', 'amber', 'Intelligent Skip Override: Leftover food detected in ring. Feeding cycle aborted.');
+            addLog('scheduler', 'amber', 'Intelligent Skip Override: Leftover food detected on surface. Feeding cycle aborted.');
             state.nextFeedSeconds = 21599; // Reset clock for another 6 hours
         } else {
             // Execute feed
@@ -619,9 +644,9 @@ function setupSimulator() {
     simIrObstacle.addEventListener('change', (e) => {
         state.irObstacle = e.target.checked;
         if (state.irObstacle) {
-            addLog('sensor', 'amber', 'IR Surface Scan: Floating leftover food detected inside ring.');
+            addLog('sensor', 'amber', 'IR Surface Scan: Floating leftover food detected.');
         } else {
-            addLog('sensor', 'cyan', 'IR Surface Scan: Feeding ring cleared.');
+            addLog('sensor', 'cyan', 'IR Surface Scan: Surface area cleared.');
         }
     });
 }

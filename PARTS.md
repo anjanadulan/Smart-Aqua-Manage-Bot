@@ -26,14 +26,15 @@ graph TD
     NodeMCU[NodeMCU ESP32 / ESP8266]:::logicPower
     ESP32_CAM[ESP32-CAM Module]:::logicPower
     RelayBoard[5V Relay Board]:::logicPower
-    StepperDriver[A4988 Stepper / CNC Shield V3 Logic]:::logicPower
+    StepperDriver[A4988 Drivers / CNC Shield V3 Logic]:::logicPower
     SG90[SG90 Micro-Servo]:::logicPower
     IRSensor[IR Obstacle Sensor]:::logicPower
     CapWater[Capacitive Water Sensor]:::logicPower
     TDSSensor[TDS Sensor Board]:::logicPower
 
     %% High Power Devices
-    StepperMotor[High-Torque Stepper Motor]:::motorPower
+    StepperMotorX[X-Axis Stepper Motor]:::motorPower
+    StepperMotorY[Y-Axis Stepper Motor]:::motorPower
     FilterPump[AC Water Filter Pump]:::highVoltage
     UVSterilizer[AC UV Lamp]:::highVoltage
 
@@ -51,7 +52,8 @@ graph TD
     PSU_DC5V -->|5V VCC| TDSSensor
 
     PSU_DC12V -->|12V VMOT| StepperDriver
-    StepperDriver -->|Driven Phase Lines| StepperMotor
+    StepperDriver -->|X Phase Lines| StepperMotorX
+    StepperDriver -->|Y Phase Lines| StepperMotorY
 
     NodeMCU -->|3.3V Output| IRSensor
     NodeMCU -->|3.3V Output| CapWater
@@ -65,14 +67,15 @@ graph TD
     %% Core Controllers
     subgraph Core Controller [NodeMCU ESP32 / ESP8266]
         MCU[Microcontroller CPU]
-        Pin_D1[GPIO D1 / Step]
-        Pin_D2[GPIO D2 / Dir]
+        Pin_D1[GPIO D1 / X-Step]
+        Pin_D2[GPIO D2 / X-Dir]
         Pin_D3[GPIO D3 / Servo PWM]
         Pin_D4[GPIO D4 / Relay 1]
         Pin_D5[GPIO D5 / Relay 2]
         Pin_D6[GPIO D6 / IR Signal]
         Pin_D7[GPIO D7 / Water Level]
-        Pin_D8[GPIO D8 / IR Enable]
+        Pin_D8[GPIO D8 / Y-Step]
+        Pin_D0[GPIO D0 / Y-Dir]
         Pin_A0[Analog A0 / TDS Read]
     end
 
@@ -90,19 +93,20 @@ graph TD
 
     %% Output Actuators
     subgraph Output Actuators
-        A4988["A4988 Driver (or CNC Shield V3 X-Axis)"]
+        A4988["CNC Shield V3 (X & Y Drivers)"]
         Servo[SG90 Micro-Servo]
         Relays[5V Dual-Channel Relay Board]
     end
 
     %% Wiring Connections
     IR -->|Digital Out| Pin_D6
-    Pin_D8 -.->|Optional Enable Signal| IR
     Capacitive -->|Digital Out| Pin_D7
     TDS -->|Analog Voltage Out| Pin_A0
 
-    Pin_D1 -->|Step Pulses| A4988
-    Pin_D2 -->|Direction Signal| A4988
+    Pin_D1 -->|X-Step Pulses| A4988
+    Pin_D2 -->|X-Dir Signal| A4988
+    Pin_D8 -->|Y-Step Pulses| A4988
+    Pin_D0 -->|Y-Dir Signal| A4988
     Pin_D3 -->|PWM Control| Servo
     Pin_D4 -->|Trigger Channel 1| Relays
     Pin_D5 -->|Trigger Channel 2| Relays
@@ -142,7 +146,7 @@ graph TD
 ### 📡 4. Sensors & Water Quality Tools
 | Part Image / Symbol | Component Name | Key Specifications | Primary Role in System | Qty |
 | :---: | :--- | :--- | :--- | :---: |
-| 🚨 | **KY-032 IR Sensor** | 38kHz modulated frequency, NE555 timer, active-low digital output, range 2-40cm, enable pin. | Mounted above the floating feeding ring; detects leftover floating food while ignoring ambient light reflections. | 1 |
+| 🚨 | **KY-032 IR Sensor** | 38kHz modulated frequency, NE555 timer, active-low digital output, range 2-40cm. | Mounted above the surface area; detects leftover food while ignoring ambient light reflections. | 1 |
 | 🧪 | **Analog TDS Water Conductivity Sensor** | Output voltage 0 ~ 2.3V, operating voltage 3.3V ~ 5V, measurement range 0 ~ 1000ppm, accuracy ±10% F.S. | Measures electrical conductivity of dissolved solids to monitor water purity and schedule water changes. | 1 |
 | 💧 | **Capacitive Water Sensor** | Contactless capacitive level switch, liquid level detection thickness up to 10mm. | Fixed externally on the tank wall at the critical low-level mark to trigger emergency alarms. | 1 |
 
@@ -154,31 +158,34 @@ graph TD
 | :--- | :--- | :--- | :--- | :--- |
 | **5V / Vin** | All 5V Boards | VCC / 5V / VDD | Power | 5V Logic voltage supply line |
 | **GND** | All Components | GND | Ground | Common system ground reference |
-| **D1 (GPIO 5)** | A4988 Driver / CNC Shield V3 | STEP / X.STEP pin | Digital Output | High/Low pulses to drive stepper distance and speed |
-| **D2 (GPIO 4)** | A4988 Driver / CNC Shield V3 | DIR / X.DIR pin | Digital Output | High (Forward) / Low (Reverse) direction control |
+| **D1 (GPIO 5)** | A4988 / CNC Shield V3 | X-STEP | Digital Output | Pulses driving X-axis horizontal movement |
+| **D2 (GPIO 4)** | A4988 / CNC Shield V3 | X-DIR | Digital Output | Direction control for X-axis motor |
 | **D3 (GPIO 0)** | SG90 Servo | Signal (Orange) | PWM Output | Servo angle positioning signal (0 to 180 degrees) |
 | **D4 (GPIO 2)** | 5V Relay Ch 1 | IN1 (Filter Pump) | Digital Output | Active-Low signal triggering primary filter pump relay |
 | **D5 (GPIO 14)**| 5V Relay Ch 2 | IN2 (UV Light) | Digital Output | Active-Low signal triggering germicidal UV lamp relay |
 | **D6 (GPIO 12)**| KY-032 IR Sensor | OUT | Digital Input | High (Clear) / Low (Leftover food detected) |
 | **D7 (GPIO 13)**| Capacitive Sensor| OUT (Water Level) | Digital Input | High (Water Present) / Low (Water Below Level - Alarm) |
-| **D8 (GPIO 15)**| KY-032 IR Sensor | EN (Optional) | Digital Output | Low (Enable) / High (Disable). Leave jumper cap on to bypass. |
+| **D8 (GPIO 15)**| A4988 / CNC Shield V3 | Y-STEP | Digital Output | Pulses driving Y-axis vertical movement |
+| **D0 (GPIO 16)**| A4988 / CNC Shield V3 | Y-DIR | Digital Output | Direction control for Y-axis motor |
 | **A0 (ADC 0)**  | TDS Sensor Board | Analog Out | Analog Input | Voltage signal representing total dissolved solids concentration (ppm) |
 
 ---
 
 > [!NOTE]
-> **CNC Shield V3 Wiring Details:**
-> If you choose to use the CNC Shield V3 instead of the standalone A4988 breakout board:
-> 1. Use the **X-axis** driver slot on the shield for the stepper motor.
-> 2. Bridge the **Reset** and **Sleep** pins on the X-axis driver slot using a jumper cap.
-> 3. Connect NodeMCU D1 (GPIO 5) directly to the **X.STEP** header pin (corresponding to Arduino Uno D2 pin).
-> 4. Connect NodeMCU D2 (GPIO 4) directly to the **X.DIR** header pin (corresponding to Arduino Uno D5 pin).
-> 5. Wire NodeMCU 5V (Vin) to the shield's 5V input header, and NodeMCU GND to one of the shield's GND pins.
-> 6. Wire the external 12V power supply directly to the blue screw terminals on the CNC Shield.
+> **CNC Shield V3 Wiring Details (2-Axis Gantry Setup):**
+> To run the dual-stepper X-Y gantry using the CNC Shield V3:
+> 1. Insert A4988 driver modules into the **X-axis** and **Y-axis** driver slots.
+> 2. Bridge the **Reset** and **Sleep** pins on both the X and Y axis driver slots with jumper caps.
+> 3. Connect NodeMCU D1 (GPIO 5) to the **X.STEP** header pin (Arduino D2 pin).
+> 4. Connect NodeMCU D2 (GPIO 4) to the **X.DIR** header pin (Arduino D5 pin).
+> 5. Connect NodeMCU D8 (GPIO 15) to the **Y.STEP** header pin (Arduino D3 pin).
+> 6. Connect NodeMCU D0 (GPIO 16) to the **Y.DIR** header pin (Arduino D6 pin).
+> 7. Wire NodeMCU 5V (Vin) to the shield's 5V input header, and NodeMCU GND to one of the shield's GND pins.
+> 8. Wire the external 24V (or 12V) motor power supply directly to the blue screw terminals on the CNC Shield.
 
 > [!IMPORTANT]
-> **Stepper Motor Current Limit (\(V_{ref}\)) Tuning:**
-> Since the slim **17HS4023** stepper motor is rated for lower current (\(0.7\text{A} - 1.0\text{A}\)) than a standard NEMA 17, you **must** limit the driver's output current to prevent the motor from overheating:
+> **Stepper Motors Current Limit (\(V_{ref}\)) Tuning:**
+> Since the slim **17HS4023** stepper motors (Qty: 2) are rated for lower current (\(0.7\text{A} - 1.0\text{A}\)) than a standard NEMA 17, you **must** limit the drivers' output current to prevent the motors from overheating:
 > 1. **Current Limit Target:** Limit the target output current to **\(0.6\text{A} - 0.7\text{A}\)** for optimal, cool operation.
 > 2. **Calculate \(V_{ref}\):** For standard A4988 drivers with \(0.1\,\Omega\) sensing resistors:
 >    \[

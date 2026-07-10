@@ -43,8 +43,8 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 
 ### 🥖 1. Feeding & Automation Functions
 * **6-Hour Scheduled Feeding Loop:** A local script running on the NodeMCU automatically triggers a physical feeding cycle every 6 hours by driving the SG90 Micro-Servo Motor to release a portion of food.
-* **Local Surface Barrier Scan:** Before dropping food, the system scans the surface zone utilizing a KY-032 Infrared (IR) Obstacle Avoidance Sensor module (38kHz modulated) mounted inside a floating feeding ring.
-* **Intelligent Skip Override:** If the IR sensor detects unconsumed floating food remaining on the surface, the NodeMCU aborts the automated cycle immediately to prevent hazardous overfeeding and organic water decay.
+* **Local Surface Barrier Scan:** Before dropping food, the system scans the surface zone utilizing a KY-032 Infrared (IR) Obstacle Avoidance Sensor module (38kHz modulated) mounted directly below the dispenser.
+* **Intelligent Skip Override:** If the IR sensor detects unconsumed floating food remaining on the surface area, the NodeMCU aborts the automated cycle immediately to prevent hazardous overfeeding and organic water decay.
 * **Monospace Countdown Telemetry:** Calculates and displays a precise numerical countdown ($hh:mm:ss$) on the web dashboard showing the remaining time until the next automatic feed.
 * **Physical Feed Override Button:** A dedicated dashboard switch that triggers the feeding servo immediately, completely bypassing the IR surface sensor check.
 
@@ -58,7 +58,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 
 ### 🧼 4. Automated Glass Cleaning Functions
 * **Accumulated Run-Time Tracker & Logic:** Logs the cumulative running hours of the UV light and ambient lighting systems, which directly correlate to predicted algae accumulation rates. Every $168\text{ hours}$ (7 days) of total lighting runtime, the system flags the glass panel as degraded or "dirty."
-* **Automated Cleaning Cycle Activation:** The NodeMCU automatically triggers the High-Torque Stepper Motor driven by the Stepper Motor Driver Breakout Board (or CNC Shield V3), moving a magnetic glass-scraper carriage horizontally back and forth across the front pane.
+* **Automated Cleaning Cycle Activation:** The NodeMCU automatically drives the Dual High-Torque Stepper Motors (X and Y axes) via the CNC Shield V3, moving a cleaning brush in a 2-axis CNC gantry raster grid pattern (left-right, up-down) across the front pane.
 * **Web UI Maintenance Alert:** Pushes an amber status card reading *"Automated Glass Cleaning in Progress"* to the web timeline and applies a green, cloudy texture layer over the 3D tank interface model during active sweeps.
 * **Manual Reset & Run Switch:** A dashboard control button to force an instant glass cleaning cycle on demand and reset the accumulated run-time tracker back to zero.
 
@@ -75,10 +75,10 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 | **🧠 Core Controllers & Power** | **NodeMCU Microcontroller (ESP32 or ESP8266)** | Main controller running the schedules, monitoring logic, and sensor-actuator loops. |
 | | **ESP32-CAM Module** | Secondary processing module equipped with an OV2640 camera to stream MJPEG video feed. |
 | **🔌 Switching & Motor Drivers** | **5V Relay Board** | Digital low-voltage relay board to isolate and switch high-voltage AC filter pump and UV sterilizer loads. |
-| | **Stepper Motor Driver Breakout Board (or CNC Shield V3)** | Driver carrier (e.g. A4988) or multi-axis shield to host drivers, control step/direction pulses, and supply motor power. |
+| | **CNC Shield V3 (with A4988 Drivers)** | Multi-axis gantry shield to host driver chips, regulating independent step/direction pulses for X and Y stepper motors. |
 | **🧲 Actuators & Mechanical** | **SG90 Micro-Servo Motor** | High-precision mini servo to rotate the food-dispensing mechanism during feed cycles. |
-| **🧲 Actuators & Mechanical** | **High-Torque Stepper Motor** | NEMA-style stepper motor to drive the belt-driven magnetic glass-scraper carriage. |
-| **📡 Sensors & Water Quality** | **KY-032 IR Obstacle Avoidance Sensor** | 38kHz modulated frequency sensor to scan the feeding ring surface for leftovers with high ambient light immunity. |
+| **🧲 Actuators & Mechanical** | **Dual High-Torque Stepper Motors** | NEMA-style stepper motors (Qty: 2) to power the X and Y axes of the CNC cleaning brush gantry. |
+| **📡 Sensors & Water Quality** | **KY-032 IR Obstacle Avoidance Sensor** | 38kHz modulated frequency sensor to scan the surface area directly below the dispenser for leftovers. |
 | | **Analog TDS Water Conductivity Sensor** | Total Dissolved Solids probe with signal conditioning board to measure dissolved mineral concentration and purity (in ppm). |
 | | **Capacitive Water Sensor** | Contactless capacitive sensor attached to the glass to monitor the water volume threshold. |
 
