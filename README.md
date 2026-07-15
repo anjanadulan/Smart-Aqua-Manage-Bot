@@ -5,6 +5,12 @@ A highly reliable, decentralized, and standalone aquarium management ecosystem p
 
 By prioritizing high-reliability local hardware loops over complex cloud networks, this bot ensures zero-latency task execution, maximum safety fail-safes, and a fully automated maintenance schedule—completely free of external dependencies or cloud connectivity.
 
+## Connected Prototype Baseline
+
+The active prototype uses an **ESP32 DevKit** as the main controller and an **ESP32-CAM** as the independent video module. The ESP32 hosts the dependency-free Web UI, WebSocket telemetry, six-hour feeder, filtration safety lockout, turbidity-based water-clarity alert, and the 18:00-06:00 UV schedule. See [`PROTOTYPE.md`](PROTOTYPE.md) and [`firmware/esp32-controller/`](firmware/esp32-controller/) for the current implementation.
+
+The spare NodeMCU and three Arduino Uno boards are not required for the first build. They remain available for later isolation of the CNC gantry or other hardware subsystems.
+
 ![System Concept](Concept.png)
 
 ---
@@ -23,7 +29,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
                            | (Port 80/81)                  | (Port 80/82)
                            v                               v
                 +----------+----------+         +----------+----------+
-                |  ESP32-CAM Module   |         |  NodeMCU Controller |
+                |  ESP32-CAM Module   |         | ESP32 DevKit Control|
                 | (Secondary Stream)  |         |   (Core Controller) |
                 +---------------------+         +----------+----------+
                                                            |
@@ -31,9 +37,9 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
       |                        |                           |                        |                        |
       v                        v                           v                        v                        v
 +-----+------+           +-----+------+              +-----+------+           +-----+------+           +-----+------+
-| Feeder Unit|           |Water/UV Lts|              |Glass Clean |           | Water Level|           | pH Sensor  |
-| -SG90 Servo|           | -5V Relay  |              | -Stepper   |           | -Capacitive|           | -pH-4502C  |
-| -IR Sensor |           |  (2-Ch)    |              |  -Driver   |           |  Sensor    |           |  Analog pH |
+| Feeder Unit|           |Water/UV Lts|              |Glass Clean |           | Water Level|           | Turbidity  |
+| -SG90 Servo|           | -5V Relay  |              | -Stepper   |           | -Capacitive|           |  Sensor    |
+| -IR Sensor |           |  (2-Ch)    |              |  -Driver   |           |  Sensor    |           | Analog ADC |
 +------------+           +------------+              +------------+           +------------+           +------------+
 ```
 
@@ -63,7 +69,7 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 * **Manual Reset & Run Switch:** A dashboard control button to force an instant glass cleaning cycle on demand and reset the accumulated run-time tracker back to zero.
 
 ### 🧪 5. Water Quality & Fish Monitoring Functions
-* **TDS Water Quality Monitoring Function:** Captures raw analog signals from the Analog TDS Water Conductivity Sensor, processes water salinity/mineral levels locally on the NodeMCU, and streams real-time total dissolved solids updates (in ppm) to an interactive arc-gauge widget on the dashboard.
+* **Water Clarity Monitoring Function:** Captures analog signals from a turbidity sensor, maps calibrated clean and dirty reference samples to a clarity percentage, and sends a security alert when water clarity falls below the configured threshold. This is an operational cleanliness indicator, not a laboratory water-quality test.
 * **Fish Movement & Video Monitoring Function:** The independent ESP32-CAM Module hosts a localized HTTP MJPEG video stream broadcasted straight to a Live Preview container frame on the web dashboard for remote physical inspection.
 
 ---
@@ -72,14 +78,14 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 
 | Category | Component Name | Description & Quantity |
 | :--- | :--- | :--- |
-| **🧠 Core Controllers & Power** | **NodeMCU Microcontroller (ESP32 or ESP8266)** | Main controller running the schedules, monitoring logic, and sensor-actuator loops. |
+| **🧠 Core Controllers & Power** | **ESP32 DevKit** | Main controller running schedules, safety logic, WebSocket telemetry, and sensor-actuator loops. |
 | | **ESP32-CAM Module** | Secondary processing module equipped with an OV2640 camera to stream MJPEG video feed. |
 | **🔌 Switching & Motor Drivers** | **5V Relay Board** | Digital low-voltage relay board to isolate and switch high-voltage AC filter pump and UV sterilizer loads. |
 | | **CNC Shield V3 (with A4988 Drivers)** | Multi-axis gantry shield to host driver chips, regulating independent step/direction pulses for X and Y stepper motors. |
 | **🧲 Actuators & Mechanical** | **SG90 Micro-Servo Motor** | High-precision mini servo to rotate the food-dispensing mechanism during feed cycles. |
 | **🧲 Actuators & Mechanical** | **Dual High-Torque Stepper Motors** | NEMA-style stepper motors (Qty: 2) to power the X and Y axes of the CNC cleaning brush gantry. |
 | **📡 Sensors & Water Quality** | **KY-032 IR Obstacle Avoidance Sensor** | 38kHz modulated frequency sensor to scan the surface area directly below the dispenser for leftovers. |
-| | **Analog TDS Water Conductivity Sensor** | Total Dissolved Solids probe with signal conditioning board to measure dissolved mineral concentration and purity (in ppm). |
+| | **Analog Turbidity Sensor** | Optical sensor with signal-conditioning board used to estimate water clarity after calibration with clean and dirty reference samples. |
 | | **Capacitive Water Sensor** | Contactless capacitive sensor attached to the glass to monitor the water volume threshold. |
 
 ---
@@ -96,8 +102,8 @@ The user interface is structured as a unified, fully responsive single-page dash
 |                          |                              |                       |
 |   [ 3D Viewport ]        |  [ Live Video Stream ]       |  Timeline Registry:   |
 |                          |  - (ESP32-CAM MJPEG Feed)    |                       |
-|   * Dynamic Y-Scale      |  [ TDS Purity Arc-Gauge ]    |  [Cyan] Filter Active |
-|     Water Mesh           |  - Real-time TDS: 150 ppm    |  [Cyan] UV Lamp ON    |
+|   * Dynamic Y-Scale      |  [ Water Clarity Gauge ]      |  [Cyan] Filter Active |
+|     Water Mesh           |  - Real-time clarity: 88%     |  [Cyan] UV Lamp ON    |
 |                          |                              |                       |
 |   * UV violet ambient    |                              |  [Amber] Cleaning...  |
 |     glow overlay         |  [ Telemetry & Countdown ]   |                       |
@@ -115,10 +121,10 @@ An interactive 3D render of the aquarium tank using **Three.js** that visually m
 * **Filter Pump Particles:** Emits a rising particle bubble system to indicate active water flow when the filter pump runs.
 * **Dirty Glass Texture:** Mapped onto the front pane, this green, cloudy texture gradually increases opacity as the accumulated lighting clock counts up, clearing back to transparent after a cleaning cycle completes.
 
-### 📊 Panel 2: Live Preview & Manual Commands (with TDS Gauge)
+### 📊 Panel 2: Live Preview & Manual Commands (with Clarity Gauge)
 Houses real-time analog and digital telemetry coupled with physical overrides:
 * **Live Video Preview:** Contains the local HTTP MJPEG stream broadcast directly by the ESP32-CAM module to observe fish movement.
-* **TDS Arc-Gauge Widget:** An interactive radial gauge displaying calibrated Total Dissolved Solids data in ppm (0 to 1000 ppm) with custom color ranges for pure, ideal, and high-solid mineral accumulation states.
+* **Water Clarity Widget:** Displays a calibrated clarity percentage and raises a warning when the value drops below the configured clean threshold.
 * **Countdown Telemetry:** Monospaced clock ($hh:mm:ss$) showing the time remaining until the next automatic feed cycle.
 * **Manual Override Switches:** Interactive buttons to force an instant feed (bypassing the surface sensor), toggle the filtration pump relay, toggle the UV light relay, or trigger an unscheduled glass cleaning sweep.
 
@@ -142,4 +148,4 @@ A running history log of system-level activities, structured using distinct, col
 
 > [!NOTE]
 > **Sensor Calibration & Fail-safe Mode**
-> The pH-4502C probe requires periodic manual calibration using buffer solutions (pH 4.01, 7.00, and 9.18) to prevent drift. All sensor inputs operate on pull-up/pull-down high-impedance states; if any sensor connection is severed or unplugged, the system defaults to a fail-safe alarm state (cutting power to UV/heaters and issuing a RED alert).
+> Calibrate the turbidity sensor with known clean and dirty aquarium-water samples before trusting the clarity alert. Low water forces the filtration relay off and sends a critical dashboard/browser notification. The filter remains off after recovery until an operator enables it again.

@@ -6,80 +6,71 @@
 
 | Severity | Concern | Evidence | Impact | Suggested action |
 |----------|---------|----------|--------|------------------|
-| High | Product documentation describes working device control, but only a browser simulation is implemented | No firmware files; no `WebSocket`/network client in `3D/app.js`; `SYSTEM_GUIDE.md:38-40` | Users may mistake simulated commands/alarms for physical device state | Choose the controller target, add firmware and a versioned command/telemetry protocol, then label simulation vs connected mode explicitly |
-| High | Low-water alarm does not enforce the documented protective state in the dashboard | `3D/app.js:578-607` only styles/logs; filter/UV state remains unchanged | UI can continue showing filter/UV active during a critical alarm | Implement one authoritative safety transition, force relevant outputs off, disable unsafe controls, and require explicit recovery rules |
-| High | Initial filter state conflicts with documented safe boot state | `3D/app.js:14`, `3D/index.html:85` start ON; `SYSTEM_GUIDE.md:168` says relay outputs default OFF | Connected implementation could normalize an unsafe startup expectation | Define the safe boot state in one protocol/spec and make UI, firmware, and docs agree |
-| High | “Completely offline” claim conflicts with mandatory internet-hosted runtime assets | `README.md:5,14`; `3D/index.html:51,176-177`; `3D/styles.css:1` | Fresh offline startup loses Three.js/controls/fonts/image and may fail initialization | Vendor required assets and use a local camera/fallback asset |
-| High | Hardware/controller selection and safety design are unresolved | `README.md:75` and `PARTS.md:127` say ESP32 or ESP8266; `PARTS.md:161-170` uses ESP8266-style D pins; no firmware | Pin capabilities, ADC range, memory, libraries, and wiring cannot be validated | Select an exact board/module revision and validate the pin/power map before assembly |
-| Medium | Specifications retain contradictory components and behavior | pH remains in `README.md:34-36,145`; TDS is used elsewhere; heater shutdown appears in `SYSTEM_GUIDE.md:157,228` without a heater in the BOM; floating ring remains in `PARTS.md:144` | Build, calibration, and safety instructions are ambiguous | Reconcile README, system guide, parts list, UI, and schematic against one approved hardware baseline |
+| High | Firmware has not been compiled or exercised on the exact ESP32/sensor modules | PlatformIO unavailable; calibration values marked prototype | Wiring/API mistakes could damage equipment or defeat safety behavior | Install PlatformIO, compile, then bench-test at logic voltage before mains connection |
+| High | Relay and sensor polarity are assumptions until measured | `hardware_config.h` | Reversed polarity can energize a relay at the wrong time | Verify each module with a meter and update config |
+| High | WebSocket/HTTP control has no device authentication | `src/main.cpp`, `web/app.js` | Any client on the reachable network can issue commands | Keep access inside LAN/Tailscale ACLs; add authenticated commands before public exposure |
+| High | Night UV schedule loses wall-clock knowledge after fully offline power loss | `PROTOTYPE.md`; browser clock-sync implementation | UV auto mode remains off until time sync | Add and integrate a battery-backed DS3231 RTC |
+| High | Browser notification is not guaranteed background remote delivery | `web/app.js` | Critical alerts can be missed when no page is open | Select a push/webhook service and add delivery acknowledgement |
+| Medium | Legacy guides still contain obsolete NodeMCU/TDS wiring below warning blocks | `SYSTEM_GUIDE.md`, `PARTS.md` | A builder could follow the wrong pin table | Replace legacy sections after the physical baseline is bench-approved |
 
 ### 2) Technical Debt
 
 | Debt item | Why it exists | Where | Risk if ignored | Suggested fix |
 |-----------|---------------|-------|-----------------|---------------|
-| Monolithic browser controller | Prototype combines rendering, state, simulated domain rules, alerts, and DOM mutation | `3D/app.js` (652 lines) | Hardware integration will create tightly coupled, hard-to-test code | Split pure state transitions, device transport, view rendering, and Three.js scene code |
-| Simulation constants embedded in code | No config/protocol layer exists | `3D/app.js:13-24`, `249-320`, `394-430`, `499-515` | Calibration and production timing changes require code edits | Centralize named simulation and device configuration with units |
-| Misleading legacy names | pH UI was repurposed for TDS | `3D/index.html:57-64`, `3D/styles.css:236-281` | Future work may apply wrong domain assumptions | Rename `.ph-*` classes to `.tds-*` |
-| Unused Three.js object | `edgeMesh` is constructed but never added to the scene | `3D/app.js:129-139` | Intended tank edges are absent and maintenance is confusing | Add it if needed or delete the dead construction |
-| No persistence | Prototype stores schedules/logs only in memory | `3D/app.js:13-25` | Refresh/reboot resets operational history and timers | Define firmware-owned persistence and dashboard synchronization |
-| Documentation encoding artifacts | Several rendered strings show mojibake in terminal/source | `README.md`, `SYSTEM_GUIDE.md`, `3D/app.js:563,593` | Alerts/docs can display corrupted symbols depending on encoding | Normalize repository text files to UTF-8 and verify rendering |
+| Unpinned firmware libraries | Prototype prioritizes setup speed | `platformio.ini` | Future dependency updates can break builds | Pin versions after first successful hardware build |
+| Blocking servo delays | Simple prototype actuation | `operateFeeder` | WebSocket handling pauses for about one second | Convert feeder to a non-blocking state machine |
+| Single-file firmware | Initial cohesive prototype | `src/main.cpp` | More subsystems will increase coupling | Split protocol, sensors, schedules, and outputs after bench validation |
+| Single-file Web UI controller | No frontend build step by design | `web/app.js` | Maintenance becomes harder as features grow | Split into classic local scripts or introduce a build only if ESP32 resource budget permits |
+| No retained event log | Events exist only in connected UI/serial | Firmware and Web UI | Restart removes incident history | Add bounded Preferences/flash event records with wear limits |
 
 ### 3) Security Concerns
 
 | Risk | OWASP category (if applicable) | Evidence | Current mitigation | Gap |
 |------|--------------------------------|----------|--------------------|-----|
-| Device commands have no defined authentication/authorization model | A01 Broken Access Control / A07 Identification and Authentication Failures | `SYSTEM_GUIDE.md:38-40`; no implementation/config | Local-network-only intent narrows exposure | A local attacker or exposed remote bridge could control relays/actuators; define authenticated sessions and command authorization |
-| Remote camera options are documented but no deployment boundary is selected | A05 Security Misconfiguration | `esp32Cam/esp32_cam_anywhere_streaming.md` | Guide warns against direct port forwarding | `[ASK USER]` Select the approved remote-access topology and threat model before implementation |
-| HTML construction could become an injection sink when telemetry is connected | A03 Injection | `3D/app.js:526-538` interpolates `category` and `message` into `innerHTML` | Current callers use fixed/local strings | Use `textContent`/DOM nodes before accepting device or network-provided log text |
-| Third-party runtime delivery lacks local pinning/control | A08 Software and Data Integrity Failures | CDN scripts in `3D/index.html:176-177`; remote CSS import in `3D/styles.css:1` | Explicit library versions are present for Three.js | No SRI hashes, CSP, vendoring, or offline copy |
-| Physical mains/UV safety depends on prose rather than verifiable implementation | N/A | `README.md:133-145`; no firmware/test evidence | README calls for IP65 enclosure, GFCI, and UV shielding | Electrical interlocks, normally-safe relay behavior, fault detection, and HIL verification are `[TODO]` |
+| Unauthenticated hardware commands | A01/A07 | WebSocket command handler | Private LAN/Tailscale recommendation | Per-device authentication and authorization |
+| Base ESP32-CAM example has no hardened public boundary | A05 | Camera setup guide | Direct port forwarding prohibited | Gateway authentication/TLS if public access is later required |
+| AP credential strength depends on local secrets | A07 | `secrets.example.h` | Real secret file is ignored | Enforce stronger setup/rotation process |
+| Physical mains and UV exposure | N/A | `README.md`, `PROTOTYPE.md` | Enclosure/GFCI/shielding guidance | Qualified electrical review and hardware interlocks |
 
 ### 4) Performance and Scaling Concerns
 
 | Concern | Evidence | Current symptom | Scaling risk | Suggested improvement |
 |---------|----------|-----------------|-------------|-----------------------|
-| A new mesh geometry/material is allocated for every bubble | `3D/app.js:221-239`, called probabilistically each animation frame | Frequent allocation and garbage collection on long-running dashboards | Lower-power phones/tablets may stutter | Use a bounded object pool or `InstancedMesh` and dispose removed resources |
-| Renderer uses unrestricted device pixel ratio | `3D/app.js:82` | High-DPI screens render at full pixel density | GPU cost and battery use rise sharply | Cap pixel ratio and adapt quality to device performance |
-| MJPEG remote streaming is bandwidth-heavy | Intended stream in `SYSTEM_GUIDE.md:39`; tradeoffs in `esp32Cam/esp32_cam_anywhere_streaming.md` | Not measurable because stream is not implemented | 720p/remote usage may have low FPS or high bandwidth | Benchmark the selected camera/gateway topology with target devices and network conditions |
-| Main-thread monolith runs render and simulation loops together | `3D/app.js:241-324`, `394-430` | No current benchmark | Device messages and richer scenes can cause UI jitter | Separate transport/state updates and profile before adding complexity |
+| ESP32-CAM MJPEG bandwidth | Camera architecture | Not yet benchmarked | Remote relay paths may add lag or reduce FPS | Start at VGA, verify direct Tailscale path, then benchmark MediaMTX if needed |
+| One-second blocking manual feed | `operateFeeder` | Short protocol pause during actuation | Multiple clients may see stale updates | Non-blocking servo state machine |
+| Telemetry broadcast every second | `loop()` | Appropriate for prototype | More clients consume heap/network | Cap clients and measure heap before expansion |
+| Web UI event list is in-memory only | `web/app.js` | Limited to 30 DOM events | No long-term diagnosis | Move retention to controller or external service |
 
 ### 5) Fragile/High-Churn Areas
 
 | Area | Why fragile | Churn signal | Safe change strategy |
 |------|-------------|-------------|----------------------|
-| `README.md` | Central specification currently contradicts other files | 10 changes in last 90 days, highest in repository | Treat an approved hardware/protocol spec as source of truth and verify cross-file references |
-| `PARTS.md` | Wiring and BOM changes can create physical damage | 6 changes in last 90 days | Review against exact board datasheets and peer-check power/pin changes before assembly |
-| `3D/app.js` and `3D/index.html` | Global IDs/state make UI changes tightly coupled | 3 changes each in last 90 days | Add automated smoke tests and refactor behind stable state/view boundaries |
-| `Concept.png` | Diagram may drift from text and cannot be diff-reviewed easily | 4 changes in last 90 days | Keep a text/source diagram alongside the exported image |
+| `hardware_config.h` | Pin/polarity/calibration changes affect physical safety | New prototype boundary | Require measured evidence and a second review |
+| `src/main.cpp` | Owns all current automation | New central controller | Compile and bench-test every output change |
+| `web/app.js` | Protocol and UI state must match firmware | Major rewrite in current change | Maintain protocol fixtures and browser smoke tests |
+| `README.md`, `PARTS.md`, `SYSTEM_GUIDE.md` | Multiple generations of design | Historically high churn | Treat `PROTOTYPE.md` and firmware config as current source of truth |
 
 ### 6) `[ASK USER]` Questions
 
-1. [ASK USER] Is the next milestone a browser-only demonstration or a physically connected prototype?
-2. [ASK USER] Which exact main controller board and revision is approved: ESP8266 NodeMCU, ESP32 development board, or another board?
-3. [ASK USER] Which low-water outputs must turn off: filter pump, UV lamp, a heater not currently in the BOM, or a different set?
-4. [ASK USER] Must the deployed dashboard work with zero internet access from a cold start?
-5. [ASK USER] Is remote camera access in scope, and if so which topology is approved: private VPN/subnet routing, a gateway using WebRTC, or a cloud relay?
-6. [ASK USER] Is the water-quality sensor definitively TDS, with all remaining pH references to be removed?
-7. [ASK USER] Should feed/algae schedules survive controller restarts and power loss; if yes, what persistence/time source is available?
+1. [ASK USER] Can you add a DS3231 RTC module so the 18:00-06:00 UV schedule survives a fully offline power loss?
+2. [ASK USER] Which background notification destination should receive critical alerts when no dashboard is open?
+3. [ASK USER] What exact ESP32 DevKit revision, relay-board model, low-water sensor, and turbidity module are you using?
+4. [ASK USER] Which always-on device can act as the Tailscale subnet router: Raspberry Pi, PC, server, or supported router?
 
 ### 7) Intent vs. Reality Divergences
 
 | Stated intent | Current reality | Evidence |
 |---------------|-----------------|----------|
-| Standalone, decentralized, fully offline controller | Static browser simulation loads critical libraries/assets from the public internet | `README.md:5,14`; `3D/index.html:51,176-177`; `3D/styles.css:1` |
-| NodeMCU serves HTTP/WebSocket telemetry and commands | No firmware and no dashboard network client are present | `SYSTEM_GUIDE.md:38-40`; `3D/app.js` |
-| ESP32-CAM supplies a live MJPEG stream | UI displays a remote Unsplash still image | `README.md:67`; `3D/index.html:50-51` |
-| Critical water alarm cuts equipment power | Browser code only adds styles/logs and does not alter relay-like state | `SYSTEM_GUIDE.md:225-230`; `3D/app.js:578-607` |
-| Seven-day accumulated light runtime triggers cleaning | Simulation adds 0.5 hours every second when UV **or filter** is active; filter starts active | `README.md:59-61`; `3D/app.js:14,405-420` |
-| pH was replaced by TDS | README diagram/calibration and CSS names still reference pH | `README.md:34-36,145`; `3D/styles.css:236-281` |
+| Connected prototype | Firmware and protocol exist, but hardware compilation/bench testing remains | `firmware/esp32-controller/`, testing output |
+| Correct offline night schedule | Auto mode needs a valid clock; full power loss removes wall time | `PROTOTYPE.md`, `src/main.cpp` |
+| Anywhere alerts | Connected browser notifications exist; background push provider is undecided | `web/app.js` |
+| Automated CNC cleaner | UI/protocol surface exists, but firmware safely rejects it until homing/limits are specified | `src/main.cpp`, `hardware_config.h` |
 
 ### 8) Evidence
 
-- `README.md`
-- `SYSTEM_GUIDE.md`
-- `PARTS.md`
-- `3D/index.html`
-- `3D/app.js`
-- `3D/styles.css`
-- `esp32Cam/esp32_cam_anywhere_streaming.md`
-- `git log --since='90 days ago' --name-only` and repository scan terminal output
+- `PROTOTYPE.md`
+- `firmware/esp32-controller/src/main.cpp`
+- `firmware/esp32-controller/include/hardware_config.h`
+- `firmware/esp32-controller/platformio.ini`
+- `web/app.js`
+- `firmware/esp32-cam/README.md`

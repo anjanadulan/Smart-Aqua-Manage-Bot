@@ -6,41 +6,43 @@
 
 | Item | Rule | Example | Evidence |
 |------|------|---------|----------|
-| Files | Lowercase generic names for web assets; uppercase snake case for major guides; snake case in `esp32Cam/` | `app.js`, `SYSTEM_GUIDE.md`, `esp32_cam_anywhere_streaming.md` | Root and subdirectory listings |
-| Functions/methods | camelCase, usually verb-first | `initThreeJS`, `triggerFeedCycle`, `updateTDSDisplay` | `3D/app.js` |
-| Types/interfaces | No user-defined types or interfaces | `[TODO]` | `3D/app.js` |
-| Constants/env vars | camelCase `const`; no environment variables; mutable system values live in `state` | `filterSwitch`, `circumference`, `state.nextFeedSeconds` | `3D/app.js:13-46`, `499-503` |
-| DOM IDs/classes | kebab-case | `feed-override-btn`, `viewport-container` | `3D/index.html` |
-| CSS custom properties | kebab-case with semantic color names | `--color-cyan`, `--text-secondary` | `3D/styles.css` |
+| Files | lowercase generic web files; snake_case C++ config names | `app.js`, `hardware_config.h` | `web/`, `firmware/` |
+| JavaScript functions | camelCase, verb-first | `connectController`, `applyTelemetry` | `web/app.js` |
+| C++ functions/variables | camelCase | `sampleSensors`, `waterLow` | `src/main.cpp` |
+| C++ constants | uppercase snake case inside namespace | `FILTER_RELAY_PIN` | `hardware_config.h` |
+| DOM IDs/classes | kebab-case | `filter-switch`, `event-card` | `web/` |
 
 ### 2) Formatting and Linting
 
 - Formatter: none configured.
 - Linter: none configured.
-- Most relevant enforced rules: none mechanically enforced. Observed JavaScript style is four-space indentation, semicolons, single-quoted strings, and brace-on-same-line functions.
-- Run commands: `[TODO]` because there is no manifest or tooling configuration.
+- Observed style: four-space indentation, braces on the same line, explicit semicolons, short focused helpers.
+- Run commands: `node --check web/app.js`; PlatformIO compile is the firmware syntax/build check.
 
 ### 3) Import and Module Conventions
 
-- Import grouping/order: not applicable; JavaScript uses browser globals loaded by script tags.
-- Alias vs relative import policy: local CSS/JS references are relative; third-party libraries are absolute CDN URLs.
-- Public exports/barrel policy: none; all application symbols share the page-global script scope.
+- C++ standard/framework headers precede local quoted headers.
+- Web UI intentionally uses no third-party imports so it can run from LittleFS offline.
+- JavaScript uses one strict classic script; no barrel or alias convention exists.
 
 ### 4) Error and Logging Conventions
 
-- Error strategy by layer: no explicit runtime error handling. DOM elements and global `THREE` APIs are assumed to exist; failures can stop initialization.
-- Logging style and required context fields: in-page cards include category, severity-like CSS type, local timestamp, and message through `addLog` (`3D/app.js:526-547`). There is no persistent or console-based operational logging.
-- Sensitive-data redaction rules: `[TODO]`; the current implementation has no credentials or device payloads.
+- Firmware rejects malformed/unknown commands with negative acknowledgements and emits typed controller events.
+- Web UI parses network JSON defensively, reports protocol/network failures, and uses DOM `textContent` for untrusted messages.
+- Serial logs use bracketed categories; UI events contain category, level, time, and message.
+- Credentials remain in ignored `secrets.h`; do not log them.
 
 ### 5) Testing Conventions
 
-- Test file naming/location rule: none established.
-- Mocking strategy norm: none established; the Hardware Simulator UI manually changes state.
-- Coverage expectation: `[TODO]`.
+- Browser checks cover simulator mode, manual confirmation, safety lockout, and mobile overflow.
+- Firmware changes should pass `pio run` before flashing and receive bench tests with mains loads disconnected.
+- Hardware calibration values must not be copied between sensor modules without measurement.
+- Coverage threshold: `[TODO]`.
 
 ### 6) Evidence
 
-- `3D/app.js`
-- `3D/index.html`
-- `3D/styles.css`
-- Root repository scan terminal output (no lint/format config detected)
+- `web/app.js`
+- `web/styles.css`
+- `firmware/esp32-controller/src/main.cpp`
+- `firmware/esp32-controller/include/hardware_config.h`
+- `firmware/esp32-controller/.gitignore`

@@ -4,49 +4,49 @@
 
 ### 1) Test Stack and Commands
 
-- Primary test framework: none configured.
-- Assertion/mocking tools: none configured.
+- Primary automated test framework: none committed yet.
+- Current checks: Node.js syntax check and Playwright/Chrome smoke checks run during implementation.
 - Commands:
 
 ```powershell
-# No repository-defined all/unit/integration/e2e/coverage commands exist.
-# JavaScript parse check used during analysis:
-node --check 3D/app.js
+node --check web/app.js
+cd firmware/esp32-controller
+pio run
 ```
-
-The parse check passed, but it does not execute DOM, WebGL, timer, or hardware behavior.
 
 ### 2) Test Layout
 
-- Test file placement pattern: no test files or directories found.
-- Naming convention: none established.
-- Setup files and where they run: none.
+- No committed test directory exists.
+- Browser validation currently executes externally against a local static server.
+- Firmware bench procedures are described in the controller README and prototype safety gates.
 
 ### 3) Test Scope Matrix
 
 | Scope | Covered? | Typical target | Notes |
 |-------|----------|----------------|-------|
-| Unit | No | Countdown formatting, TDS mapping, state transitions | Logic is embedded in DOM/global functions |
-| Integration | No | DOM + Three.js, future WebSocket/device adapter | No automated browser or device test harness |
-| E2E | No | Feed, low-water shutdown, cleaning, reconnect flows | Hardware simulator is manual, not an automated test |
-| Hardware-in-loop | No | Relays, servo, sensors, steppers, camera | No firmware or HIL configuration exists |
+| Static JavaScript | Yes | `web/app.js` parse | Passed with Node.js |
+| Browser smoke | Partial | Simulator, feed confirmation, low-water lockout, mobile overflow | Passed in headless Chrome at 390 px; desktop visually inspected |
+| Firmware compile | No | ESP32 PlatformIO project | PlatformIO is not installed in the current workspace runtime |
+| Hardware-in-loop | No | Sensors, relay polarity, servo, Wi-Fi recovery | Required before connecting mains loads |
+| Remote camera | No | MJPEG/Tailscale/MediaMTX latency | Requires deployed camera and gateway hardware |
 
 ### 4) Mocking and Isolation Strategy
 
-- Main mocking approach: manual browser simulator controls for water level, TDS, and IR obstacle state (`3D/index.html:139-172`, `3D/app.js:614-651`).
-- Isolation guarantees: none; timers and animation loops share the single global state object.
-- Common failure mode in tests: `[TODO]` because there is no test history. Likely test seams first require separating pure state transitions from DOM and Three.js side effects.
+- The Web UI simulator implements the same command entry point used by the WebSocket connection.
+- `applyTelemetry` accepts complete or partial telemetry payloads for state testing.
+- Browser event cards use `textContent`, allowing safe synthetic network messages.
+- Hardware tests must begin with relay loads disconnected and measured at logic level.
 
 ### 5) Coverage and Quality Signals
 
-- Coverage tool + threshold: `[TODO]` (none configured).
-- Current reported coverage: `[TODO]` (no report).
-- Known gaps: every application path lacks automated coverage; especially low-water safety behavior, feed/clean mutual exclusion, timer resets, CDN failure, responsive layout, and future WebSocket reconnect/acknowledgement behavior.
-- Current static signal: `node --check 3D/app.js` completed successfully on 2026-07-14.
+- Coverage tool + threshold: `[TODO]`.
+- Current reported coverage: `[TODO]`.
+- Verified signals: no JavaScript syntax error; no page error in the smoke flow; no mobile horizontal overflow; low-water controls lock correctly.
+- Highest-priority gaps: firmware compilation, relay polarity, sensor disconnection, power-cycle timing, WebSocket authentication, and camera latency.
 
 ### 6) Evidence
 
-- `3D/app.js`
-- `3D/index.html`
-- Repository scan and `rg --files -g '*test*' -g '*spec*'` terminal output
-- Node syntax-check terminal output
+- `web/app.js`
+- `web/index.html`
+- `firmware/esp32-controller/src/main.cpp`
+- Implementation terminal output from Node.js and Playwright checks

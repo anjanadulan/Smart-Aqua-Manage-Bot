@@ -1,5 +1,8 @@
 # Master Parts List & Hardware Interfacing Diagrams
 
+> [!IMPORTANT]
+> **Prototype source of truth:** Use the ESP32 DevKit pin map in `firmware/esp32-controller/include/hardware_config.h` and the safety notes in `PROTOTYPE.md`. The NodeMCU/TDS pin tables below are retained as legacy design material and are not approved for the connected prototype.
+
 This document contains the detailed Bill of Materials (BOM), specifications, pin mapping reference, and system connection schematics for the **Smart Aqua Manage Bot (v2.0)**.
 
 ---

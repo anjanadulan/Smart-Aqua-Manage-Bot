@@ -6,51 +6,54 @@
 
 | Area | Value | Evidence |
 |------|-------|----------|
-| Primary language | Browser JavaScript, HTML, and CSS | `3D/app.js`, `3D/index.html`, `3D/styles.css` |
-| Runtime + version | Web browser with WebGL and modern DOM APIs; exact supported browser/version is `[TODO]` | `3D/app.js`, `3D/index.html` |
-| Package manager | None configured | No repository manifest or lock file; repository scan and root file listing |
-| Module/build system | None; classic scripts and a directly opened/served HTML page | `3D/index.html:174-178` |
-
-The repository also contains C++-style firmware pseudocode, but no compilable microcontroller firmware or Arduino/PlatformIO manifest is present.
+| Primary languages | Arduino C++, browser JavaScript, HTML, CSS | `firmware/esp32-controller/src/main.cpp`, `web/` |
+| Runtime + target | ESP32 DevKit using Arduino framework; modern browser | `firmware/esp32-controller/platformio.ini`, `web/app.js` |
+| Package manager | PlatformIO Library Registry for firmware; no Web UI packages | `firmware/esp32-controller/platformio.ini` |
+| Build system | PlatformIO with LittleFS Web UI image | `firmware/esp32-controller/platformio.ini`, `scripts/sync_webui.py` |
 
 ### 2) Production Frameworks and Dependencies
 
 | Dependency | Version | Role in system | Evidence |
 |------------|---------|----------------|----------|
-| Three.js | r128 / 0.128.0 | WebGL aquarium scene and animation | `3D/index.html:176`, `3D/app.js:66-324` |
-| Three.js OrbitControls | 0.128.0 | Interactive camera orbiting | `3D/index.html:177`, `3D/app.js:87-92` |
-| Google Fonts | CDN-selected families; version not pinned | Inter, Outfit, and Share Tech Mono typography | `3D/styles.css:1` |
-| Unsplash image endpoint | Unversioned remote asset | Placeholder in the ESP32-CAM preview | `3D/index.html:50-51` |
-
-These are remote browser dependencies; none is vendored in the repository.
+| Arduino-ESP32 | Platform-selected | ESP32 runtime, Wi-Fi, HTTP, LittleFS, Preferences | `platformio.ini`, `src/main.cpp` |
+| links2004/WebSockets | Platform-selected | WebSocket telemetry and commands on port 82 | `platformio.ini`, `src/main.cpp` |
+| ArduinoJson | Platform-selected | JSON protocol serialization | `platformio.ini`, `src/main.cpp` |
+| ESP32Servo | Platform-selected | Feeder servo control | `platformio.ini`, `src/main.cpp` |
+| Browser DOM/CSS APIs | Browser-provided | Dependency-free operational dashboard | `web/index.html`, `web/app.js`, `web/styles.css` |
 
 ### 3) Development Toolchain
 
 | Tool | Purpose | Evidence |
 |------|---------|----------|
-| Git | Version history | `.git/` and `git log` terminal output |
-| `[TODO]` | No formatter, linter, test runner, bundler, or firmware toolchain is configured | Root scan found no relevant manifests/configs |
+| PlatformIO | Firmware dependency resolution, compile, upload, LittleFS upload | `firmware/esp32-controller/platformio.ini` |
+| Git | Version control | `.git/` |
+| Node.js syntax check | Static JavaScript parse verification | Analysis terminal output |
+| Playwright with local Chrome | Browser interaction and responsive smoke checks | Analysis terminal output |
 
 ### 4) Key Commands
 
-There are no repository-defined install, build, test, or lint commands.
-
 ```powershell
-# Optional local preview using any static HTTP server; no canonical command is defined.
-# [TODO] Select and document the supported preview/deployment command.
+cd firmware/esp32-controller
+pio run
+pio run -t upload
+pio run -t uploadfs
+pio device monitor
+node --check ../../web/app.js
 ```
 
 ### 5) Environment and Config
 
-- Config sources: hardcoded JavaScript state in `3D/app.js`; hardcoded CDN/image URLs in `3D/index.html` and `3D/styles.css`.
-- Required env vars: none read by the current implementation.
-- Deployment/runtime constraints: JavaScript must run in a browser with WebGL; a fresh load currently requires internet access for Three.js, OrbitControls, fonts, and the preview image.
-- Firmware runtime, exact ESP board target, board definitions, and library versions: `[TODO]` because firmware is not present.
+- Wi-Fi/AP secrets: local ignored `firmware/esp32-controller/include/secrets.h`, copied from `secrets.example.h`.
+- Hardware calibration and polarity: `include/hardware_config.h`.
+- Web UI connection/camera settings: browser `localStorage` through the Settings dialog.
+- The Web UI has no internet-hosted runtime dependency and is suitable for LittleFS hosting.
+- Exact library versions are not pinned yet: `[TODO]` before a reproducible release.
 
 ### 6) Evidence
 
-- `3D/index.html`
-- `3D/app.js`
-- `3D/styles.css`
-- `SYSTEM_GUIDE.md`
-- Root repository scan and file listing terminal output
+- `firmware/esp32-controller/platformio.ini`
+- `firmware/esp32-controller/src/main.cpp`
+- `firmware/esp32-controller/include/hardware_config.h`
+- `web/index.html`
+- `web/app.js`
+- `web/styles.css`

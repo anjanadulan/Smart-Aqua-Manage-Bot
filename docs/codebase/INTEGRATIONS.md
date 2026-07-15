@@ -6,43 +6,45 @@
 
 | System | Type (API/DB/Queue/etc) | Purpose | Auth model | Criticality | Evidence |
 |--------|---------------------------|---------|------------|-------------|----------|
-| cdnjs | CDN script | Loads Three.js r128 | None | High for current page startup | `3D/index.html:176` |
-| jsDelivr | CDN script | Loads OrbitControls 0.128.0 | None | High for current page startup | `3D/index.html:177` |
-| Google Fonts | CDN stylesheet/font assets | Loads UI fonts | None | Low | `3D/styles.css:1` |
-| Unsplash | Remote image | Camera-preview placeholder | Query-string URL, no repository credential | Low | `3D/index.html:50-51` |
-| NodeMCU WebSocket/HTTP | Intended local device API | Telemetry, commands, and dashboard hosting | `[TODO]` | High | `SYSTEM_GUIDE.md:38-40` (design only); absent from `3D/app.js` |
-| ESP32-CAM MJPEG | Intended local video stream | Live aquarium preview | `[TODO]` | Medium | `SYSTEM_GUIDE.md:39`; current placeholder in `3D/index.html:51` |
-| Tailscale/Husarnet/MediaMTX/go2rtc | Researched remote-access options, not selected or implemented | Potential remote camera access | `[TODO]` | `[TODO]` | `esp32Cam/esp32_cam_anywhere_streaming.md` |
+| ESP32 WebSocket :82 | Local device API | Telemetry, events, commands, clock sync | None yet; trusted LAN/private route | High | `src/main.cpp`, `web/app.js` |
+| ESP32 HTTP :80 | Local HTTP | Hosts dependency-free Web UI from LittleFS | None yet | High | `src/main.cpp` |
+| ESP32-CAM MJPEG | Local HTTP video | Prototype live video | None in base example | Medium | `firmware/esp32-cam/README.md` |
+| Tailscale subnet router | Private network route | Anywhere access without port forwarding | Tailnet identity and ACLs | Medium | `PROTOTYPE.md` |
+| MediaMTX | Optional WebRTC gateway | Public-browser low-latency playback | `[TODO]` HTTPS/auth deployment | Optional | `PROTOTYPE.md`, Web UI settings |
+| Browser Notifications | Browser API | Visible safety notifications while UI is available | User permission | Medium | `web/app.js` |
 
 ### 2) Data Stores
 
 | Store | Role | Access layer | Key risk | Evidence |
 |-------|------|--------------|----------|----------|
-| Browser memory | Holds simulation, schedule, and alarm state | Global `state` object | All values reset on reload; not authoritative | `3D/app.js:13-25` |
-| Persistent store | `[TODO]` None implemented | None | Maintenance/feed history cannot survive restart | No storage API or firmware source in repository |
+| ESP32 Preferences | Persists UV operating mode and last feed timestamp | Firmware | Does not provide wall-clock time after total power loss | `src/main.cpp` |
+| Browser localStorage | Persists connection/camera settings | Web UI | Per-browser only | `web/app.js` |
+| LittleFS | Stores Web UI assets | ESP32 HTTP server | Must upload filesystem after UI change | `platformio.ini`, `src/main.cpp` |
 
 ### 3) Secrets and Credentials Handling
 
-- Credential sources: none in the runnable dashboard.
-- Hardcoding checks: public CDN/image URLs and conceptual local IPs/ports are hardcoded; no passwords, tokens, or API keys were found.
-- Rotation or lifecycle notes: not applicable to the current page; `[TODO]` for future device/VPN/relay authentication.
+- Wi-Fi and fallback-AP credentials live in ignored `include/secrets.h`.
+- `secrets.example.h` contains placeholders only.
+- No remote gateway, webhook, or camera credential is stored in firmware yet.
+- Device command authentication and secret rotation are `[TODO]`.
 
 ### 4) Reliability and Failure Behavior
 
-- Retry/backoff behavior: none for external assets; device integration is not implemented.
-- Timeout policy: only simulation delays and periodic timers exist; no network timeout is configured.
-- Circuit-breaker or fallback behavior: the camera has alt text but no programmatic fallback. If either Three.js CDN fails, `initThreeJS` will fail because `THREE` is assumed globally available.
+- Browser reconnects with exponential backoff capped at 15 seconds.
+- Telemetry older than 10 seconds is marked stale.
+- Local automation remains on the ESP32 when browser/network connectivity fails.
+- Tailscale may use direct, peer-relay, or DERP paths; latency depends on the established path.
+- Camera failure is shown independently and does not block controls.
 
 ### 5) Observability for Integrations
 
-- Logging around external calls: no external calls are made by application JavaScript; asset load failures are not logged.
-- Metrics/tracing coverage: none.
-- Missing visibility gaps: no connectivity indicator tied to an actual device, no last-telemetry timestamp, no reconnect counter, no camera health state, and no command acknowledgement.
+- Firmware serial logs and WebSocket events report system/safety/command transitions.
+- UI exposes live/offline/simulator state and telemetry age.
+- Missing: retained event history, device metrics, remote delivery acknowledgement, camera frame-rate/latency metrics.
 
 ### 6) Evidence
 
-- `3D/index.html`
-- `3D/styles.css`
-- `3D/app.js`
-- `SYSTEM_GUIDE.md`
-- `esp32Cam/esp32_cam_anywhere_streaming.md`
+- `firmware/esp32-controller/src/main.cpp`
+- `firmware/esp32-controller/include/secrets.example.h`
+- `web/app.js`
+- `PROTOTYPE.md`

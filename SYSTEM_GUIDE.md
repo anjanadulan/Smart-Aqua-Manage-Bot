@@ -1,5 +1,8 @@
 # Smart Aqua Manage Bot (v2.0) - Connectivity & System Guide
 
+> [!IMPORTANT]
+> **Prototype source of truth:** The connected prototype now uses an ESP32 DevKit main controller, ESP32-CAM video module, turbidity-based clarity alert, and the firmware in `firmware/esp32-controller/`. The NodeMCU/TDS examples below describe the earlier conceptual design and must not be used as the current wiring or firmware specification. See `PROTOTYPE.md`.
+
 This guide provides a detailed conceptual explanation of the physical and network connectivity, the firmware code architecture, the operational project workflows, and visual logic diagrams for the standalone aquarium management system.
 
 ---
