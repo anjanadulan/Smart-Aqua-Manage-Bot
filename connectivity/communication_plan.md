@@ -1,127 +1,124 @@
-# Communication & Telemetry Plan: Web-to-ESP Local Connectivity
+# Global Connectivity Plan: Vercel Hosting & Firebase Realtime Database
 
-This document outlines the architectural plan for connecting the Web Dashboard client to the local ESP microcontroller (ESP32/ESP8266) without relying on external cloud networks or heavy database servers.
+This document details the architectural plan for global access monitoring and control of the Smart Aqua Manage Bot utilizing **Vercel** for hosting the frontend web application and **Google Firebase Realtime Database** as the real-time cloud sync bridge.
 
 ---
 
-## 1. Core Architecture: Localized Zero-Latency Loop
+## 1. System Architecture: Vercel & Firebase Sync
 
-To maintain the system's requirement of **high reliability and offline independence**, we will bypass cloud databases (like Firebase, AWS, or MySQL) and external hosting. Instead, the communication stack is hosted entirely on the microcontroller itself using the local Wi-Fi router.
+To provide secure, low-latency control from anywhere in the world, the system is structured as a cloud-synchronized loop:
 
 ```
-+-------------------------------------------------------------------------+
-|                          LOCAL WI-FI NETWORK                            |
-|                                                                         |
-|  +------------------------+                     +-----------------------+
-|  |   Microcontroller      |  Serves Web Files   |    Web Client Browser |
-|  |  (ESP32 / ESP8266)     |-------------------> | (PC/Tablet/Smartphone)|
-|  |  - IP: 192.168.4.1     |   (Port 80 HTTP)    |                       |
-|  |  - Host: smartaqua.loc |                     +-----------+-----------+
-|  +-----------+------------+                                 |
-|              ^                                              |
-|              |         WebSocket Bi-directional Stream      |
-|              +==============================================+
-|                            (Port 82 WS - Real-time)                     |
-+-------------------------------------------------------------------------+
+                                  +------------------------------+
+                                  |       Vercel Server          |
+                                  |  (Hosts 3D Web Dashboard)    |
+                                  |   https://smartaqua.vercel.app|
+                                  +--------------+---------------+
+                                                 |
+                                                 | Reads/Writes (JSON API)
+                                                 v
++-----------------------+         +--------------+---------------+
+|   ESP Microcontroller |<=======>|  Google Firebase Realtime DB |
+|  (Connected to Home   |         |      (Cloud Database Sync)   |
+|   Wi-Fi Internet)     |         |  https://project.firebaseio  |
++-----------------------+         +------------------------------+
 ```
 
----
-
-## 2. Communication Methods & Protocols
-
-We will implement three core local network technologies:
-
-### A. HTTP Web Server (Port 80) — File Delivery
-* **How it works:** The ESP runs a lightweight HTTP web server. The HTML, CSS, and JS dashboard files are stored directly on the ESP's onboard flash memory filesystem (**LittleFS**).
-* **Action:** When you connect your phone or laptop to the smart aquarium's local Wi-Fi and type the IP address in your browser, the ESP reads the web files from flash memory and sends them to your browser.
-* **Why this is used:** It removes the need for hosting the website on the internet. The dashboard is loaded straight from the physical hardware.
-
-### B. WebSockets (Port 82) — Real-Time Telemetry & Commands
-* **How it works:** Unlike HTTP requests (which require opening and closing a connection for every single query), WebSockets establish a single, persistent, bi-directional connection between the web browser and the ESP.
-* **Telemetry Flow (ESP -> Web):** Every 1 second, the ESP gathers sensor readings (TDS, water level, countdown, active cycles) and pushes them as a lightweight JSON string to the browser.
-* **Command Flow (Web -> ESP):** When you toggle a button on the dashboard (e.g., turn UV light ON), a WebSocket message is instantly sent to the ESP, triggering the relay in milliseconds.
-* **Why this is used:** Zero latency, extremely low overhead, and real-time updates.
-
-### C. mDNS (Multicast DNS) — Name Resolution
-* **How it works:** Instead of memorizing and typing numeric IP addresses like `192.168.4.1` into your browser, the ESP broadcasts a local domain name using mDNS.
-* **Action:** You can simply type `http://smartaqua.local` in your browser address bar, and your device will automatically locate the ESP.
+### Components
+1. **Frontend Hosting (Vercel):** The custom 3D Web Dashboard (`3D/` folder) is deployed to Vercel. Vercel provides a globally distributed CDN, automatic SSL certificates (HTTPS), and zero-configuration builds.
+2. **Cloud Database (Firebase Realtime Database):** A NoSQL cloud database hosted by Google. It synchronizes data in real-time to all connected clients using WebSocket-based streams.
+3. **Hardware Node (ESP32/ESP8266):** The controller connects to your home Wi-Fi and exchanges data with Firebase using secure SSL HTTP/WebSockets.
 
 ---
 
-## 3. Data Persistence: Do We Need a Database?
+## 2. Communication Protocol & Workflows
 
-**No, a standard database is not required.** A full database (like SQLite or MySQL) consumes too much RAM and flash space on a microcontroller. 
+Instead of directly hosting web servers on the ESP (which requires complex router port-forwarding and exposing your home network to the public internet), the ESP and Vercel communicate through Firebase.
 
-Instead, we will use the following local storage methods:
+### A. Telemetry Stream (ESP ➔ Firebase ➔ Vercel)
+* **ESP Action:** Every 2 to 3 seconds, the ESP polls the sensors (TDS, water level) and writes a JSON payload to the `/telemetry` path in Firebase using the `Firebase-ESP-Client` C++ library.
+* **Vercel Dashboard Action:** The dashboard running in the browser attaches a listener to the `/telemetry` path in Firebase. Firebase instantly pushes any changes to the browser, updating the 3D tank mesh and gauges in real-time.
 
-1. **Onboard Flash Memory Configuration (LittleFS):** 
-   * Settings (such as SSID, passwords, and custom feeding intervals) will be stored in a simple, flat JSON configuration file (`config.json`) inside the ESP's LittleFS flash storage.
-2. **Non-Volatile RAM (EEPROM/Preferences):**
-   * High-write data (like the cumulative `algaeClock` run-time hours) will be saved in the EEPROM (ESP8266) or via the **Preferences Library** (ESP32) so that if the power cuts out, the gantry runtime tracker is not lost and resumes exactly where it left off.
-3. **Circular Logger Buffer (In-RAM):**
-   * The status timeline logs (Cyan, Amber, Red cards) will be generated dynamically by the ESP and pushed to the browser. The web app's memory will keep the last 20 logs active. We do not need to store years of log history on the micro-chip.
+### B. Command Routing (Vercel ➔ Firebase ➔ ESP)
+* **Vercel Dashboard Action:** When you toggle a button (e.g., "FEED NOW"), the dashboard writes the new command state (e.g. `{"feed_now": true}`) to the `/commands` path in Firebase.
+* **ESP Action:** The ESP keeps an active stream listener connected to the `/commands` path. As soon as Firebase detects the write, it sends a stream event to the ESP over the Wi-Fi. The ESP parses the command, executes the physical motor/relay logic, and writes `{"feed_now": false}` back to Firebase to clear the trigger state.
 
 ---
 
-## 4. WebSocket Data Payloads (JSON Schema)
+## 3. Database Schema
 
-### A. Telemetry Stream (ESP -> Browser)
-Sent automatically every second to update the 3D model, pH/TDS gauges, and status cards.
+The database is structured as a single JSON tree:
 
 ```json
 {
-  "type": "TELEMETRY",
-  "tds": 155,
-  "waterLevel": 95,
-  "filterActive": true,
-  "uvActive": false,
-  "nextFeed": 21599,
-  "algaeHours": 42.5,
-  "cleaning": false
-}
-```
-
-### B. Control Commands (Browser -> ESP)
-Sent immediately when a dashboard switch is clicked.
-
-```json
-{
-  "type": "COMMAND",
-  "device": "FILTER" | "UV" | "FEED_OVERRIDE" | "CLEAN_SWEEP",
-  "state": true | false
+  "aquarium": {
+    "telemetry": {
+      "tds": 150,
+      "waterLevel": 95,
+      "filterActive": true,
+      "uvActive": false,
+      "nextFeedSeconds": 21599,
+      "algaeClock": 42.5,
+      "timestamp": 1783683522
+    },
+    "commands": {
+      "feedOverride": false,
+      "filterToggle": true,
+      "uvToggle": false,
+      "cleanSweep": false
+    }
+  }
 }
 ```
 
 ---
 
-## 5. Connection Sequence Workflow
+## 4. Connection & Synchronization Sequence
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
-    participant Browser
+    participant Browser as Vercel Frontend
+    participant DB as Firebase Database
     participant ESP as ESP Microcontroller
-    participant Flash as LittleFS (Flash)
+    participant Hard as Physical Sensors/Actuators
 
-    User->>Browser: Navigate to http://smartaqua.local
-    Browser->>ESP: HTTP GET / (Port 80)
-    ESP->>Flash: Read index.html, styles.css, app.js
-    Flash-->>ESP: File Data
-    ESP-->>Browser: Serve Dashboard Files
-    
-    Note over Browser: Page renders & runs app.js
-    Browser->>ESP: WebSocket Handshake Request (Port 82)
-    ESP-->>Browser: WebSocket Connected (Keep-Alive)
-    
-    loop Every 1 Second
-        ESP->>ESP: Poll Sensors (TDS, level)
-        ESP->>Browser: Push JSON Telemetry Payload
-        Browser->>Browser: Update Three.js 3D View & Gauges
+    ESP->>DB: Establish persistent SSL connection (Port 443)
+    ESP->>DB: Listen to path: "/aquarium/commands"
+    Browser->>DB: Listen to path: "/aquarium/telemetry"
+
+    rect rgb(20, 30, 40)
+        Note over ESP: Telemetry Loop (Every 3 seconds)
+        Hard->>ESP: Poll TDS & Water Level
+        ESP->>DB: Update "/aquarium/telemetry" (JSON write)
+        DB-->>Browser: Event: Telemetry Updated
+        Browser->>Browser: Update 3D Tank Scale & Gauges
     end
 
-    User->>Browser: Clicks "CLEAN GLASS"
-    Browser->>ESP: Send Command Payload {"type": "COMMAND", "device": "CLEAN_SWEEP"}
-    ESP->>ESP: Fire X & Y stepper drivers, run CNC raster sweep
-    ESP-->>Browser: Push Telemetry {"cleaning": true}
+    rect rgb(40, 30, 20)
+        Note over Browser: Command Loop
+        User->>Browser: Clicks "FEED NOW"
+        Browser->>DB: Set "/aquarium/commands/feedOverride" = true
+        DB-->>ESP: Event: command changed
+        ESP->>Hard: Spin SG90 Servo (feed fish)
+        ESP->>DB: Reset "/aquarium/commands/feedOverride" = false
+        DB-->>Browser: Event: command reset to false (UI button returns to idle)
+    end
 ```
+
+---
+
+## 5. Deployment & Integration Checklist
+
+### A. Vercel Deployment Setup
+1. **GitHub Sync:** Connect your GitHub repository to your Vercel account.
+2. **Project Root:** Configure Vercel to use the `3D/` folder as the root directory.
+3. **Environment Variables:** Define your Firebase API key and database URL as Vercel environment variables:
+   * `NEXT_PUBLIC_FIREBASE_API_KEY`
+   * `NEXT_PUBLIC_FIREBASE_DATABASE_URL`
+
+### B. ESP Firmware Configuration
+1. **Libraries:** Install `Firebase-ESP-Client` via Arduino Library Manager.
+2. **SSL Certificates:** Include root certificate authority fingerprints for Firebase (`*.firebaseio.com`) to allow HTTPS handshakes.
+3. **Token Auth:** Secure the database connection using Firebase Database Secret tokens or Email/Password credentials.
