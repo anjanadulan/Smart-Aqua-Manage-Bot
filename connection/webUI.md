@@ -58,8 +58,8 @@ Vercel will host your static files (HTML, CSS, JS) and deploy them to a public H
 2. Click **Add New** ➔ **Project**.
 3. Select your GitHub repository (`Smart-Aqua-Manage-Bot`) and click **Import**.
 4. In the Project Configuration settings:
-   * **Framework Preset:** Select `Other` or `None` (it is a plain HTML/JS website).
-   * **Root Directory:** Edit this and select the **`web/`** folder. *Do not deploy the root of the repo; Vercel only needs the files inside `web/`.*
+   * **Framework Preset:** Select `Other`, `None`, or your specific framework preset (e.g. Next.js, Vite, React) depending on how you build your custom app.
+   * **Root Directory:** Edit this and select the folder containing your frontend assets. *Do not deploy the root of the repo unless your frontend files are located there.*
 5. **Environment Variables:** Click to expand and add your Firebase credentials so the JavaScript code can read them:
    * Key: `NEXT_PUBLIC_FIREBASE_API_KEY` ➔ Value: `(Your Firebase API Key)`
    * Key: `NEXT_PUBLIC_FIREBASE_DB_URL` ➔ Value: `(Your Database URL)`

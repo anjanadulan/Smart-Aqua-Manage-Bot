@@ -113,7 +113,7 @@ sequenceDiagram
 
 ### A. Vercel Deployment Setup
 1. **GitHub Sync:** Connect your GitHub repository to your Vercel account.
-2. **Project Root:** Configure Vercel to use the `web/` folder as the root directory.
+2. **Project Root:** Configure Vercel to use the folder containing your custom Web UI assets (e.g. your dashboard root directory) as the project root directory.
 3. **Environment Variables:** Define your Firebase API key and database URL as Vercel environment variables:
    * `NEXT_PUBLIC_FIREBASE_API_KEY`
    * `NEXT_PUBLIC_FIREBASE_DATABASE_URL`

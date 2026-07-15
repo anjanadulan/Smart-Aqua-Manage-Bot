@@ -80,59 +80,31 @@ The Smart Aqua Manage Bot operates completely offline on a standalone localized 
 | :--- | :--- | :--- |
 | **🧠 Core Controllers & Power** | **ESP32 DevKit** | Main controller running schedules, safety logic, WebSocket telemetry, and sensor-actuator loops. |
 | | **ESP32-CAM Module** | Secondary processing module equipped with an OV2640 camera to stream MJPEG video feed. |
+| | **ESP32-CAM Module** | Secondary processing module equipped with an OV2640 camera to stream MJPEG video feed. |
 | **🔌 Switching & Motor Drivers** | **5V Relay Board** | Digital low-voltage relay board to isolate and switch high-voltage AC filter pump and UV sterilizer loads. |
 | | **CNC Shield V3 (with A4988 Drivers)** | Multi-axis gantry shield to host driver chips, regulating independent step/direction pulses for X and Y stepper motors. |
 | **🧲 Actuators & Mechanical** | **SG90 Micro-Servo Motor** | High-precision mini servo to rotate the food-dispensing mechanism during feed cycles. |
 | **🧲 Actuators & Mechanical** | **Dual High-Torque Stepper Motors** | NEMA-style stepper motors (Qty: 2) to power the X and Y axes of the CNC cleaning brush gantry. |
 | **📡 Sensors & Water Quality** | **KY-032 IR Obstacle Avoidance Sensor** | 38kHz modulated frequency sensor to scan the surface area directly below the dispenser for leftovers. |
 | | **Analog Turbidity Sensor** | Optical sensor with signal-conditioning board used to estimate water clarity after calibration with clean and dirty reference samples. |
-| | **Capacitive Water Sensor** | Contactless capacitive sensor attached to the glass to monitor the water volume threshold. |
 
 ---
 
-## Responsive Web Dashboard Layout Guide
+## Web UI Interface & Integration Requirements
 
-The user interface is structured as a unified, fully responsive single-page dashboard optimized for desktop, tablet, and mobile browsers:
+Since the frontend is custom-built by the user, the dashboard client must implement the following connections and features to interface with the ESP32 via Firebase:
 
-```
-+---------------------------------------------------------------------------------+
-|                            SMART AQUA MANAGE BOT (v2.0)                         |
-+--------------------------+------------------------------+-----------------------+
-|  Panel 1: Control Center | Panel 2: Live View & Commands| Panel 3: Status Log   |
-|                          |                              |                       |
-|   [ 3D Viewport ]        |  [ Live Video Stream ]       |  Timeline Registry:   |
-|                          |  - (ESP32-CAM MJPEG Feed)    |                       |
-|   * Dynamic Y-Scale      |  [ Water Clarity Gauge ]      |  [Cyan] Filter Active |
-|     Water Mesh           |  - Real-time clarity: 88%     |  [Cyan] UV Lamp ON    |
-|                          |                              |                       |
-|   * UV violet ambient    |                              |  [Amber] Cleaning...  |
-|     glow overlay         |  [ Telemetry & Countdown ]   |                       |
-|                          |                              |  [Amber] Feed Skipped |
-|   * Rising particle      |  [ Manual Action Buttons ]   |                       |
-|     bubble simulation    |  - Filter | UV Light         |  [Red] LOW WATER!     |
-|                          |  - Feed   | Clean Glass      |                       |
-+--------------------------+------------------------------+-----------------------+
-```
+### 1. Telemetry Displays (Reads from Firebase `/telemetry`)
+* **Water Level:** Displays current capacitive sensor depth value (percentage).
+* **Water Quality / Clarity:** Displays calibrated turbidity or conductivity values.
+* **Feeding Countdown:** Displays a countdown timer showing seconds remaining until the next automatic feed cycle.
+* **Status Indicators:** Displays active states of the filtration pump relay, UV light relay, and active gantry cleaning sweep.
 
-### 🎛️ Panel 1: 3D Three.js Viewport Control Center
-An interactive 3D render of the aquarium tank using **Three.js** that visually mirrors the real-time state of the physical hardware:
-* **Water Level:** Programmatically scales the $Y$-axis of the water mesh based on raw capacitive sensor values.
-* **UV Light Glow:** Renders a glowing violet ambient light overlay when the UV light switch is engaged.
-* **Filter Pump Particles:** Emits a rising particle bubble system to indicate active water flow when the filter pump runs.
-* **Dirty Glass Texture:** Mapped onto the front pane, this green, cloudy texture gradually increases opacity as the accumulated lighting clock counts up, clearing back to transparent after a cleaning cycle completes.
-
-### 📊 Panel 2: Live Preview & Manual Commands (with Clarity Gauge)
-Houses real-time analog and digital telemetry coupled with physical overrides:
-* **Live Video Preview:** Contains the local HTTP MJPEG stream broadcast directly by the ESP32-CAM module to observe fish movement.
-* **Water Clarity Widget:** Displays a calibrated clarity percentage and raises a warning when the value drops below the configured clean threshold.
-* **Countdown Telemetry:** Monospaced clock ($hh:mm:ss$) showing the time remaining until the next automatic feed cycle.
-* **Manual Override Switches:** Interactive buttons to force an instant feed (bypassing the surface sensor), toggle the filtration pump relay, toggle the UV light relay, or trigger an unscheduled glass cleaning sweep.
-
-### 📜 Panel 3: Chronological Notification Registry Logs
-A running history log of system-level activities, structured using distinct, color-coded status cards:
-* <span style="color:#06b6d4">**Cyan (Routine):**</span> Confirms normal operation events, such as manual override activations, successful feeding runs, and scheduled filtration triggers.
-* <span style="color:#f59e0b">**Amber (Automated Adjustments):**</span> Informs the user of system-managed corrections, including active glass cleaning sweeps and skipped feeds (overfeeding prevention).
-* <span style="color:#ef4444">**Red (Critical Alarms):**</span> Demands immediate physical attention, triggered by severe hardware faults or critical water level drops.
+### 2. Manual Controls (Writes to Firebase `/commands` or `/settings`)
+* **Relay Switches:** Buttons to toggle the filtration pump relay and UV light relay.
+* **Manual Feed Trigger:** A button to trigger an instant SG90 feed cycle (bypassing safety checks).
+* **Glass Cleaner Trigger:** A button to manually force a 2-axis CNC brush sweep.
+* **Scheduled Feed Interval:** A control input to update the hours between automatic feeds, saved in the ESP32's non-volatile memory.
 
 ---
 
