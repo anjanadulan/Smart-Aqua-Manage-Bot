@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.5 seconds
+Output:
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
@@ -490,3 +493,5 @@ void loop() {
         sendTelemetry();
     }
 }
+
+

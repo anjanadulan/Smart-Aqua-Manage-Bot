@@ -1,0 +1,65 @@
+{
+  "rules": {
+    "devices": {
+      "$deviceId": {
+        "status": {
+          ".read": "auth != null && root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true",
+          ".write": "auth != null && root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true",
+          ".validate": "newData.hasChildren(['online', 'waterLevel', 'waterQuality'])",
+          "filtrationRelay": {
+            ".read": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".write": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".validate": "newData.isBoolean()"
+          },
+          "uvRelay": {
+            ".read": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".write": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".validate": "newData.isBoolean()"
+          },
+          "feederActive": {
+            ".read": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".write": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".validate": "newData.isBoolean()"
+          },
+          "glassCleanerActive": {
+            ".read": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".write": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".validate": "newData.isBoolean()"
+          },
+          "lastFedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "nextFeedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "lastCleanedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "nextCleanAt": {
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "heartbeat": {
+          ".read": "auth != null && root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true",
+          ".write": "auth != null && root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true"
+        },
+        "config": {
+          ".read": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+          ".write": "auth != null && root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true"
+        },
+        "commands": {
+          "$commandId": {
+            ".read": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true)",
+            ".write": "auth != null && (root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true || (root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true && data.exists()))",
+            ".validate": "newData.hasChildren(['type', 'status'])"
+          }
+        },
+        "alerts": {
+          "$alertId": {
+            ".read": "auth != null && root.child('deviceOwners').child($deviceId).child(auth.uid).val() == true",
+            ".write": "auth != null && root.child('deviceUsers').child($deviceId).child(auth.uid).val() == true"
+          }
+        }
+      }    }
+  }
+}

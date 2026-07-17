@@ -18,11 +18,24 @@ The NodeMCU and three Arduino Uno boards are not required for this first control
 ## Build and flash
 
 1. Install PlatformIO.
-2. Copy `include/secrets.example.h` to `include/secrets.h` and set Wi-Fi/AP credentials.
+2. Copy `include/secrets.example.h` to `include/secrets.h` and set Wi-Fi/AP credentials plus the Firebase device credentials. Use the dedicated ESP32 Firebase account, not the web operator account.
 3. Connect the ESP32 DevKit.
 4. Run `pio run -t upload`.
 5. Run `pio run -t uploadfs` to upload the Web UI.
 6. Open the serial monitor at 115200 baud and browse to the printed controller IP.
+
+### Firebase relay control
+
+The controller authenticates to Firebase over HTTPS REST and polls these fields every second:
+
+```text
+devices/aqua-main/status/filtrationRelay
+devices/aqua-main/status/uvRelay
+```
+
+The web UI writes `true` or `false` to those child paths. The ESP32 applies the values to GPIO 26 and GPIO 27, then publishes the actual relay state back to Firebase. The local low-water safety lock always has priority and can force filtration off.
+
+The prototype uses TLS with certificate verification disabled in `main.cpp` to simplify first-board testing. Replace `setInsecure()` with CA certificate validation before using the controller outside a trusted development network.
 
 The pre-build script copies `3D/index.html`, `3D/styles.css`, and `3D/app.js` into the LittleFS data image. Do not edit generated `data/` files.
 

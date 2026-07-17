@@ -1,0 +1,8 @@
+.next/
+node_modules/
+out/
+*.log
+.env*
+!.env.example
+.data/
+.data-test/
