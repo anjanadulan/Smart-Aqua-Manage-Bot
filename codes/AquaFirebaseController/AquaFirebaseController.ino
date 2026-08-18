@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.5 seconds
-Output:
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
@@ -432,10 +429,18 @@ void startNetwork() {
 }
 
 void startServers() {
+#if AQUA_ENABLE_LITTLEFS
     if (!LittleFS.begin(true)) {
         Serial.println("LittleFS mount failed. Upload the filesystem image before use.");
     }
-    httpServer.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+    // ESP32 Arduino WebServer::serveStatic returns void in this core version.
+    httpServer.serveStatic("/", LittleFS, "/");
+#else
+    // The Firebase relay controller does not require local web files.
+    httpServer.on("/", HTTP_GET, []() {
+        httpServer.send(200, "text/plain", "AquaFirebaseController online");
+    });
+#endif
     httpServer.onNotFound([]() { httpServer.send(404, "text/plain", "Not found"); });
     httpServer.begin();
 
@@ -493,5 +498,3 @@ void loop() {
         sendTelemetry();
     }
 }
-
-
