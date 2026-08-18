@@ -1,0 +1,128 @@
+#include <ESP8266WiFi.h>
+#include <FirebaseESP8266.h>
+
+// ---------- WiFi credentials ----------
+#define WIFI_SSID "Prem Fiber"
+#define WIFI_PASSWORD "@welcome123"
+
+// ---------- Firebase credentials ----------
+#define FIREBASE_HOST "aqua-bot-dcbe0-default-rtdb.asia-southeast1.firebasedatabase.app"
+#define API_KEY "AIzaSyBLwrJHK-rU4AL8OtXM3XTrbm8JSmhtSKo"
+#define USER_EMAIL "espcam@gmail.com"
+#define USER_PASSWORD "live@1223"
+
+// FIX: Declared FirebaseData objects (using firebaseData for both reads and writes)
+FirebaseData firebaseData;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+const String basePath = "/devices/aqua-main/status";
+
+// Pin definitions
+#define feedPin            D1   // feederActive
+#define filterPin          D2   // filtrationRelay
+#define uvPin              D5   // uvRelay
+#define glassCleanerPin    D6   // glassCleanerActive
+
+unsigned long lastReadTime = 0;
+const unsigned long readInterval = 5000;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  pinMode(feedPin, OUTPUT);
+  pinMode(filterPin, OUTPUT);
+  pinMode(glassCleanerPin, OUTPUT);
+  pinMode(uvPin, OUTPUT);
+
+  digitalWrite(feedPin, LOW);
+  digitalWrite(filterPin, LOW);
+  digitalWrite(glassCleanerPin, LOW);
+  digitalWrite(uvPin, LOW);
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nConnected! IP: " + WiFi.localIP().toString());
+
+  config.host = FIREBASE_HOST;
+  config.api_key = API_KEY;
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
+  Serial.println("Waiting for Firebase authentication...");
+  while (auth.token.uid == "") {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println("\nAuthenticated. UID: " + String(auth.token.uid.c_str()));
+  Serial.println("--> Make sure this UID is added under deviceOwners/aqua-main or deviceUsers/aqua-main in your DB!");
+}
+
+void loop() {
+  // CRITICAL FIX: All network reading and pin updating must happen inside this timer block
+  if (millis() - lastReadTime >= readInterval) {
+    lastReadTime = millis();
+    
+    Serial.println("----- Checking Database Updates -----");
+
+    // 1. Filter Check
+    if (readBool("filtrationRelay")) {
+      digitalWrite(filterPin, HIGH);
+    } else {
+      digitalWrite(filterPin, LOW);
+    }
+
+    // 2. UV Relay Check
+    if (readBool("uvRelay")) {
+      digitalWrite(uvPin, HIGH);
+    } else {
+      digitalWrite(uvPin, LOW);
+    }
+
+    // 3. Glass Cleaner Check
+    if (readBool("glassCleanerActive")) {
+      digitalWrite(glassCleanerPin, HIGH);
+    } else {
+      digitalWrite(glassCleanerPin, LOW);
+    }
+
+    // 4. Feeder Check & Auto-Reset Logic
+    if (readBool("feederActive")) {
+      digitalWrite(feedPin, HIGH); // Turn feeder on
+      Serial.println("Feeder triggered! Activating motor...");
+      
+      // Run the motor/servo briefly to drop food
+      delay(1000); 
+
+      // Reset the value back to false in Firebase so it doesn't trigger continuously
+      String path = basePath + "/feederActive";
+      if (Firebase.setBool(firebaseData, path, false)) { 
+        digitalWrite(feedPin, LOW); // Turn feeder off
+        Serial.println("Feeder auto-reset to false in Firebase + pin LOW");
+      } else {
+        Serial.println("Feeder reset FAILED: " + firebaseData.errorReason());
+      }
+    }
+    
+    Serial.println("-------------------------------------");
+  }
+}
+
+bool readBool(const String &field) {
+  String path = basePath + "/" + field;
+  if (Firebase.getBool(firebaseData, path)) {
+    Serial.println(field + ": " + String(firebaseData.boolData() ? "true" : "false"));
+    return firebaseData.boolData(); 
+  } else {
+    Serial.println(field + " -> ERROR: " + firebaseData.errorReason());
+    return false; 
+  }
+}
